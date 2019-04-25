@@ -15,17 +15,6 @@ void Sub::get_pilot_desired_lean_angles(float roll_in, float pitch_in, float &ro
     roll_in *= scaler;
     pitch_in *= scaler;
 
-    // do circular limit
-    float total_in = norm(pitch_in, roll_in);
-    if (total_in > angle_max) {
-        float ratio = angle_max / total_in;
-        roll_in *= ratio;
-        pitch_in *= ratio;
-    }
-
-    // do lateral tilt to euler roll conversion
-    roll_in = (18000/M_PI) * atanf(cosf(pitch_in*(M_PI/18000))*tanf(roll_in*(M_PI/18000)));
-
     // return
     roll_out = roll_in;
     pitch_out = pitch_in;
