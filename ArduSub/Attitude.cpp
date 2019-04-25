@@ -5,7 +5,7 @@
 void Sub::get_pilot_desired_lean_angles(float roll_in, float pitch_in, float &roll_out, float &pitch_out, float angle_max)
 {
     // sanity check angle max parameter
-    aparm.angle_max = constrain_int16(aparm.angle_max,1000,8000);
+    aparm.angle_max = constrain_int16(aparm.angle_max,1000,9000);
 
     // limit max lean angle
     angle_max = constrain_float(angle_max, 1000, aparm.angle_max);
@@ -38,6 +38,18 @@ float Sub::get_pilot_desired_yaw_rate(int16_t stick_angle)
 {
     // convert pilot input to the desired yaw rate
     return stick_angle * g.acro_yaw_p;
+}
+
+// get_pilot_desired_yaw_angle - transform pilot's yaw input into a
+// desired yaw angle
+// returns desired yaw angle in centi-degrees
+float Sub::get_pilot_desired_yaw_angle(int16_t stick_angle)
+{
+    // redundant at the moment
+    // todo: Implement sanity check
+
+    // convert pilot input to the desired yaw rate
+    return stick_angle;
 }
 
 // check for ekf yaw reset and adjust target heading

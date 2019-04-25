@@ -213,7 +213,7 @@ const AP_Param::Info Sub::var_info[] = {
     // @DisplayName: Angle Max
     // @Description: Maximum lean angle in all flight modes
     // @Units: cdeg
-    // @Range: 1000 8000
+    // @Range: 1000 9000
     // @User: Advanced
     ASCALAR(angle_max, "ANGLE_MAX",                 DEFAULT_ANGLE_MAX),
 

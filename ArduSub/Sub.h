@@ -469,6 +469,7 @@ private:
     float get_smoothing_gain();
     void get_pilot_desired_lean_angles(float roll_in, float pitch_in, float &roll_out, float &pitch_out, float angle_max);
     float get_pilot_desired_yaw_rate(int16_t stick_angle);
+    float get_pilot_desired_yaw_angle(int16_t stick_angle);
     void check_ekf_yaw_reset();
     float get_roi_yaw();
     float get_look_ahead_yaw();
@@ -562,6 +563,8 @@ private:
 
     bool stabilize_init(void);
     void stabilize_run();
+    bool md_stabilize_init(void);
+    void md_stabilize_run();
     bool manual_init(void);
     void manual_run();
     void failsafe_sensors_check(void);
