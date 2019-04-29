@@ -33,6 +33,10 @@ bool Sub::set_mode(control_mode_t mode, ModeReason reason)
         success = althold_init();
         break;
 
+    case MD_ALT_HOLD:
+        success = md_althold_init();
+        break;
+
     case AUTO:
         success = auto_init();
         break;
@@ -130,6 +134,10 @@ void Sub::update_flight_mode()
         althold_run();
         break;
 
+    case MD_ALT_HOLD:
+        md_althold_run();
+        break;
+
     case AUTO:
         auto_run();
         break;
@@ -217,6 +225,7 @@ bool Sub::mode_allows_arming(control_mode_t mode, bool arming_from_gcs)
 {
     return (mode_has_manual_throttle(mode)
         || mode == ALT_HOLD
+        || mode == MD_ALT_HOLD
         || mode == POSHOLD
         || (arming_from_gcs&& mode == GUIDED)
     );
