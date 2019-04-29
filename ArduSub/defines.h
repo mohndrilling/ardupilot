@@ -41,6 +41,7 @@ enum control_mode_t {
     POSHOLD =      16,  // automatic position hold with manual override, with automatic throttle
     MANUAL =       19,   // Pass-through input with no stabilization
     MD_STABILIZE =    20, // STABILIZE mode with absolute yaw angle control
+    MD_ALT_HOLD =    21, // DEPTH HOLD mode with absolute yaw angle control
 };
 
 enum mode_reason_t {

@@ -565,6 +565,8 @@ private:
     void stabilize_run();
     bool md_stabilize_init(void);
     void md_stabilize_run();
+    bool md_althold_init(void);
+    void md_althold_run();
     bool manual_init(void);
     void manual_run();
     void failsafe_sensors_check(void);
