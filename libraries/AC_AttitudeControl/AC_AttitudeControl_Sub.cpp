@@ -269,7 +269,7 @@ void AC_AttitudeControl_Sub::rate_controller_run()
 
     // also inform motor classes about current attitude to enable position control w.r.t. the inertial frame
     Matrix3f att_to_rot_matrix; // rotation from the target body frame to the inertial frame.
-    _attitude_target_quat.inverse().rotation_matrix(att_to_rot_matrix);
+    _attitude_target_quat.rotation_matrix(att_to_rot_matrix);
     _motors.set_vehicle_attitude(att_to_rot_matrix);
 
     control_monitor_update();

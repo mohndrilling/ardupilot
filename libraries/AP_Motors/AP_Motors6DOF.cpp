@@ -156,11 +156,11 @@ void AP_Motors6DOF::setup_motors(motor_frame_class frame_class, motor_frame_type
         add_motor_raw_6dof(AP_MOTORS_MOT_2,     0,              0,              -1.0f,          0,                  -1.0f,              -1.0f,          2);
         add_motor_raw_6dof(AP_MOTORS_MOT_3,     0,              0,              -1.0f,          0,                  1.0f,               1.0f,           3);
         add_motor_raw_6dof(AP_MOTORS_MOT_4,     0,              0,              1.0f,           0,                  1.0f,               -1.0f,          4);
-        add_motor_raw_6dof(AP_MOTORS_MOT_5,     1.0f,           -1.0f,          0,              -1.0f,              0,                  0,              5);
-        add_motor_raw_6dof(AP_MOTORS_MOT_6,     -1.0f,          -1.0f,          0,              -1.0f,              0,                  0,              6);
-        add_motor_raw_6dof(AP_MOTORS_MOT_7,     1.0f,           1.0f,           0,              -1.0f,              0,                  0,              7);
-        add_motor_raw_6dof(AP_MOTORS_MOT_8,     -1.0f,          1.0f,           0,              -1.0f,              0,                  0,              8);
-        break;
+        add_motor_raw_6dof(AP_MOTORS_MOT_5,     1.0f,           -1.0f,          0,              1.0f,              0,                  0,              5);
+        add_motor_raw_6dof(AP_MOTORS_MOT_6,     -1.0f,          -1.0f,          0,              1.0f,              0,                  0,              6);
+        add_motor_raw_6dof(AP_MOTORS_MOT_7,     1.0f,           1.0f,           0,              1.0f,              0,                  0,              7);
+        add_motor_raw_6dof(AP_MOTORS_MOT_8,     -1.0f,          1.0f,           0,              1.0f,              0,                  0,              8);
+        break;            
 
     case SUB_FRAME_VECTORED:
         add_motor_raw_6dof(AP_MOTORS_MOT_1,     0,              0,              1.0f,           0,                  -1.0f,              1.0f,           1);
@@ -509,6 +509,9 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
         throttle_thrust = _throttle_thrust_max;
         limit.throttle_upper = true;
     }
+
+    // positive throttle should result in a lift up of the rov along the negative z-axis. Therefore invert the throttle thrust
+    throttle_thrust = - throttle_thrust;
 
 
     // calculate each motor's contribution to linear movement with regard to the inertial frame
