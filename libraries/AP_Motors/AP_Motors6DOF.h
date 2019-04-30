@@ -58,6 +58,7 @@ protected:
     // Parameters
     AP_Int8             _motor_reverse[AP_MOTORS_MAX_NUM_MOTORS];
     AP_Float            _forwardVerticalCouplingFactor;
+    AP_Int8             _move_wrt_ned;
 
     // motor's contribution to linear velocity w.r.t. the body frame
     float               _throttle_factor[AP_MOTORS_MAX_NUM_MOTORS]; // each motors contribution to throttle (climb/descent)

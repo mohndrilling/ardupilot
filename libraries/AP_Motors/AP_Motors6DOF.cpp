@@ -118,6 +118,13 @@ const AP_Param::GroupInfo AP_Motors6DOF::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("12_DIRECTION", 13, AP_Motors6DOF, _motor_reverse[11], 1),
 
+    // @Param: POS_WRT_NED
+    // @DisplayName: Linear movement wrt. ned frame
+    // @Description: Set this parameter to 1 to interprete translational motion w.r.t. the NED-Frame
+    // @Values: 0:Disabled, 1:Enabled
+    // @User: Standard
+    AP_GROUPINFO("POS_WRT_NED", 14, AP_Motors6DOF, _move_wrt_ned, 0),
+
     AP_GROUPEND
 };
 
@@ -513,20 +520,27 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
     // positive throttle should result in a lift up of the rov along the negative z-axis. Therefore invert the throttle thrust
     throttle_thrust = - throttle_thrust;
 
-
-    // calculate each motor's contribution to linear movement with regard to the inertial frame
+    // calculate each motor's contribution to linear movement
     for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
         if (motor_enabled[i]) {
-            Vector3f thrust_vector_B = Vector3f(_forward_factor[i], _lateral_factor[i], _throttle_factor[i]);
-            Vector3f thrust_vector_I = _vehicle_attitude * thrust_vector_B;
-            _inertial_forward_factor[i] = thrust_vector_I[0];
-            _inertial_lateral_factor[i] = thrust_vector_I[1];
-            _inertial_throttle_factor[i] = thrust_vector_I[2];
+            if (_move_wrt_ned) {
+                // thrust factors with regard to the ned frame
+                Vector3f thrust_vector_B = Vector3f(_forward_factor[i], _lateral_factor[i], _throttle_factor[i]);
+                Vector3f thrust_vector_I = _vehicle_attitude * thrust_vector_B;
+                _inertial_forward_factor[i] = thrust_vector_I[0];
+                _inertial_lateral_factor[i] = thrust_vector_I[1];
+                _inertial_throttle_factor[i] = thrust_vector_I[2];
+            }
+            else {
+                // thrust factors with regard to the body frame
+                _inertial_forward_factor[i] = _forward_factor[i];
+                _inertial_lateral_factor[i] = _lateral_factor[i];
+                _inertial_throttle_factor[i] = _throttle_factor[i];
+            }
+
         }
     }
 
-
-    // TODO enable parameterisable use of position control either w.r.t. inertial or body frame
     // calculate roll, pitch and linear contribution for each motor (only used by vertical thrusters)
     rpt_max = 1; //Initialized to 1 so that normalization will only occur if value is saturated
     for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
