@@ -59,9 +59,15 @@ protected:
     AP_Int8             _motor_reverse[AP_MOTORS_MAX_NUM_MOTORS];
     AP_Float            _forwardVerticalCouplingFactor;
 
+    // motor's contribution to linear velocity w.r.t. the body frame
     float               _throttle_factor[AP_MOTORS_MAX_NUM_MOTORS]; // each motors contribution to throttle (climb/descent)
     float               _forward_factor[AP_MOTORS_MAX_NUM_MOTORS]; // each motors contribution to forward/backward
     float               _lateral_factor[AP_MOTORS_MAX_NUM_MOTORS];  // each motors contribution to lateral (left/right)
+
+    // motor's contribution to linear velocity w.r.t. the inertial frame
+    float               _inertial_throttle_factor[AP_MOTORS_MAX_NUM_MOTORS]; // each motors contribution to throttle (climb/descent)
+    float               _inertial_forward_factor[AP_MOTORS_MAX_NUM_MOTORS]; // each motors contribution to forward/backward
+    float               _inertial_lateral_factor[AP_MOTORS_MAX_NUM_MOTORS];  // each motors contribution to lateral (left/right)
 
     // current limiting
     float _output_limited = 1.0f;

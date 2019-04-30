@@ -510,13 +510,29 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
         limit.throttle_upper = true;
     }
 
-    // calculate roll, pitch and Throttle for each motor (only used by vertical thrusters)
+
+    // calculate each motor's contribution to linear movement with regard to the inertial frame
+    for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
+        if (motor_enabled[i]) {
+            Vector3f thrust_vector_B = Vector3f(_forward_factor[i], _lateral_factor[i], _throttle_factor[i]);
+            Vector3f thrust_vector_I = _vehicle_attitude * thrust_vector_B;
+            _inertial_forward_factor[i] = thrust_vector_I[0];
+            _inertial_lateral_factor[i] = thrust_vector_I[1];
+            _inertial_throttle_factor[i] = thrust_vector_I[2];
+        }
+    }
+
+
+    // TODO enable parameterisable use of position control either w.r.t. inertial or body frame
+    // calculate roll, pitch and linear contribution for each motor (only used by vertical thrusters)
     rpt_max = 1; //Initialized to 1 so that normalization will only occur if value is saturated
     for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
         if (motor_enabled[i]) {
             rpt_out[i] = roll_thrust * _roll_factor[i] +
                          pitch_thrust * _pitch_factor[i] +
-                         throttle_thrust * _throttle_factor[i];
+                         forward_thrust * _inertial_forward_factor[i] +
+                         lateral_thrust * _inertial_lateral_factor[i] +
+                         throttle_thrust * _inertial_throttle_factor[i];
             if (fabsf(rpt_out[i]) > rpt_max) {
                 rpt_max = fabsf(rpt_out[i]);
             }
@@ -529,8 +545,9 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
     for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
         if (motor_enabled[i]) {
             yfl_out[i] = yaw_thrust * _yaw_factor[i] +
-                         forward_thrust * _forward_factor[i] +
-                         lateral_thrust * _lateral_factor[i];
+                         forward_thrust * _inertial_forward_factor[i] +
+                         lateral_thrust * _inertial_lateral_factor[i] +
+                         throttle_thrust * _inertial_throttle_factor[i];
             if (fabsf(yfl_out[i]) > yfl_max) {
                 yfl_max = fabsf(yfl_out[i]);
             }

@@ -99,6 +99,9 @@ public:
     float               get_lateral() const { return _lateral_in; }
     virtual float       get_throttle_hover() const = 0;
 
+    // set vehicle attitude (to perform proper control allocation for position control w.r.t. inertial frame)
+    void set_vehicle_attitude(Matrix3f body_to_ned_rot_mat) { _vehicle_attitude = body_to_ned_rot_mat; };
+
     // motor failure handling
     void                set_thrust_boost(bool enable) { _thrust_boost = enable; }
     bool                get_thrust_boost() const { return _thrust_boost; }
@@ -220,6 +223,7 @@ protected:
     float               _forward_in;                // last forward input from set_forward caller
     float               _lateral_in;                // last lateral input from set_lateral caller
     float               _throttle_avg_max;          // last throttle input from set_throttle_avg_max
+    Matrix3f            _vehicle_attitude;          // rotation matrix from vehicle's body frame to inertial frame
     LowPassFilterFloat  _throttle_filter;           // throttle input filter
     DesiredSpoolState   _spool_desired;             // desired spool state
     SpoolState          _spool_state;               // current spool mode
