@@ -648,10 +648,11 @@ void AC_PosControl::run_z_controller()
     }
     thr_out += _motors.get_throttle_hover();
 
-    // send throttle to attitude controller with angle boost
-    _attitude_control.set_throttle_out(thr_out, true, POSCONTROL_THROTTLE_CUTOFF_FREQ);
-
-    // _speed_down_cms is checked to be non-zero when set
+    // send throttle to attitude controller without angle boost
+    // currently disabled due to singularity at roll/pitch = +-90 deg (dividing by zero in AttitudeControl_Sub::get_throttle_boosted(..))
+    _attitude_control.set_throttle_out(thr_out, false, POSCONTROL_THROTTLE_CUTOFF_FREQ);
+    
+	// _speed_down_cms is checked to be non-zero when set
     float error_ratio = _vel_error.z/_speed_down_cms;
 
     _vel_z_control_ratio += _dt*0.1f*(0.5-error_ratio);
