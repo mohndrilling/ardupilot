@@ -55,9 +55,6 @@ void Sub::md_althold_run()
     // update attitude controller targets
     attitude_control.input_euler_angle_roll_pitch_yaw(target_roll, target_pitch, target_yaw, true);
 
-    // output pilot's throttle
-    attitude_control.set_throttle_out(channel_throttle->norm_input(), false, g.throttle_filt);
-
     // Hold actual position until zero derivative is detected
     static bool engageStopZ = true;
     // Get last user velocity direction to check for zero derivative points

@@ -624,8 +624,10 @@ void AC_PosControl::run_z_controller()
 
     float thr_out = (p + i + d) * 0.001f + _motors.get_throttle_hover();
 
-    // send throttle to attitude controller with angle boost
-    _attitude_control.set_throttle_out(thr_out, true, POSCONTROL_THROTTLE_CUTOFF_FREQ);
+    // send throttle to attitude controller without angle boost
+    // todo: do an experimental validation, whether angle boost is needed/useful
+    // currently disabled due to singularity at roll/pitch = +-90 deg (dividing by zero in AttitudeControl_Sub::get_throttle_boosted(..))
+    _attitude_control.set_throttle_out(thr_out, false, POSCONTROL_THROTTLE_CUTOFF_FREQ);
 }
 
 ///
