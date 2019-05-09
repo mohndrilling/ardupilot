@@ -529,21 +529,21 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
 
     // calculate each motor's contribution to linear movement
     for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
-        if (motor_enabled[i]) {
+        if (motor_enabled[i]) {            
+            // thrust factors with regard to the ned frame
+            Vector3f thrust_vector_B = Vector3f(_forward_factor[i], _lateral_factor[i], _throttle_factor[i]);
+            Vector3f thrust_vector_I = _vehicle_attitude * thrust_vector_B;
             if (_move_wrt_ned) {
-                // thrust factors with regard to the ned frame
-                Vector3f thrust_vector_B = Vector3f(_forward_factor[i], _lateral_factor[i], _throttle_factor[i]);
-                Vector3f thrust_vector_I = _vehicle_attitude * thrust_vector_B;
                 _inertial_forward_factor[i] = thrust_vector_I[0];
                 _inertial_lateral_factor[i] = thrust_vector_I[1];
-                _inertial_throttle_factor[i] = thrust_vector_I[2];
             }
             else {
                 // thrust factors with regard to the body frame
                 _inertial_forward_factor[i] = _forward_factor[i];
                 _inertial_lateral_factor[i] = _lateral_factor[i];
-                _inertial_throttle_factor[i] = _throttle_factor[i];
             }
+            // throttle is always interpreted w.r.t. ned frame
+            _inertial_throttle_factor[i] = thrust_vector_I[2];
 
         }
     }
