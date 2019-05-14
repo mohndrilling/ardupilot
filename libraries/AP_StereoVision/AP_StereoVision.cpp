@@ -59,8 +59,10 @@ AP_StereoVision::AP_StereoVision()
 }
 
 // detect and initialise any sensors
-void AP_StereoVision::init()
+void AP_StereoVision::init(uint32_t log_bit)
 {
+     _log_bit = log_bit;
+
     // create backend
     if (_type == AP_StereoVision_Type_MAV) {
         _driver = new AP_StereoVision_MAV(*this);
@@ -70,7 +72,8 @@ void AP_StereoVision::init()
 // return true if sensor is enabled
 bool AP_StereoVision::enabled() const
 {
-    return ((_type != AP_StereoVision_Type_None) && (_driver != nullptr));
+    return true;
+//    return ((_type != AP_StereoVision_Type_None) && (_driver != nullptr));
 }
 
 // update stereo camera sensor data
