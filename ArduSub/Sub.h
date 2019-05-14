@@ -92,6 +92,10 @@
 #include <AP_OpticalFlow/AP_OpticalFlow.h>     // Optical Flow library
 #endif
 
+#if STEREOVISION == ENABLED
+#include <AP_StereoVision/AP_StereoVision.h>     // Stereo Vision library
+#endif
+
 #if RCMAP_ENABLED == ENABLED
 #include <AP_RCMapper/AP_RCMapper.h>        // RC input mapping library
 #endif
@@ -210,7 +214,10 @@ private:
 #if OPTFLOW == ENABLED
     OpticalFlow optflow;
 #endif
-
+    // Optical flow sensor
+#if STEREOVISION == ENABLED
+    AP_StereoVision stereovision;
+#endif
     // system time in milliseconds of last recorded yaw reset from ekf
     uint32_t ekfYawReset_ms = 0;
 
@@ -614,6 +621,9 @@ private:
     bool rangefinder_alt_ok(void);
 #if OPTFLOW == ENABLED
     void init_optflow();
+#endif
+#if STEREOVISION == ENABLED
+    void init_stereovision();
 #endif
     void terrain_update();
     void terrain_logging();

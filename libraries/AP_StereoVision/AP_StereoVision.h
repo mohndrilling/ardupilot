@@ -54,7 +54,7 @@ public:
     };
 
     // detect and initialise any sensors
-    void init();
+    void init(uint32_t log_bit);     // bitmask bit which indicates if we should log.  -1 means we always log
 
     // should be called really, really often.  The faster you call
     // this the lower the latency of the data fed to the estimator.
@@ -89,6 +89,9 @@ private:
     AP_Int8 _type;
     AP_Vector3f _pos_offset;    // position offset of the camera in the body frame
     AP_Int8 _orientation;       // camera orientation on vehicle frame
+
+
+    uint32_t _log_bit = -1;     // bitmask bit which indicates if we should log.  -1 means we always log
 
     // reference to backends
     AP_StereoVision_Backend *_driver;

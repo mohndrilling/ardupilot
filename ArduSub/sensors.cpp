@@ -104,6 +104,15 @@ void Sub::init_optflow()
 }
 #endif      // OPTFLOW == ENABLED
 
+// initialise stereovision sensor
+#if STEREOVISION == ENABLED
+void Sub::init_stereovision()
+{
+    // initialise optical flow sensor
+    stereovision.init(MASK_LOG_STEREOVISION);
+}
+#endif      // STEREOVISION == ENABLED
+
 void Sub::accel_cal_update()
 {
     if (hal.util->get_soft_armed()) {
