@@ -38,14 +38,14 @@ public:
 
     // external position backend types (used by _TYPE parameter)
     enum AP_StereoVision_Type {
-        AP_AP_StereoVision_Type_None   = 0,
-        AP_AP_StereoVision_Type_MAV    = 1
+        AP_StereoVision_Type_None   = 0,
+        AP_StereoVision_Type_MAV    = 1
     };
 
     // The AP_StereoVisionState structure is filled in by the backend driver
     struct AP_StereoVisionState {
         Vector3f lin_velocity;       // linear velocity with regard to body frame
-        uint32_t distance;    // distance to nearest poincloud in front
+        uint64_t distance;    // distance to nearest poincloud in front
         uint64_t time_delta_usec;   // time delta (in usec) between previous and most recent update
         float confidence;           // confidence expressed as a value from 0 (no confidence) to 100 (very confident)
         uint32_t last_sensor_update_ms;    // system time (in milliseconds) of last update from sensor
@@ -80,7 +80,7 @@ private:
 
     // state accessors
     const Vector3f &get_lin_velocity() const { return _state.lin_velocity; }
-    const Vector3f &get_distance() const { return _state.distance; }
+    const uint64_t &get_distance() const { return _state.distance; }
     uint64_t get_time_delta_usec() const { return _state.time_delta_usec; }
     float get_confidence() const { return _state.confidence; }
     uint32_t get_last_update_ms() const { return _state.last_sensor_update_ms; }
@@ -98,5 +98,5 @@ private:
 };
 
 namespace AP {
-    AP_StereoVision *AP_StereoVision();
+    AP_StereoVision *stereovision();
 };
