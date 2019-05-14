@@ -39,6 +39,7 @@
 #include <AP_Common/AP_FWVersion.h>
 #include <AP_VisualOdom/AP_VisualOdom.h>
 #include <AP_OpticalFlow/OpticalFlow.h>
+#include <AP_StereoVision/AP_StereoVision.h>
 #include <AP_Baro/AP_Baro.h>
 #include <AP_EFI/AP_EFI.h>
 #include <AP_Proximity/AP_Proximity.h>
@@ -3135,6 +3136,15 @@ void GCS_MAVLINK::handle_optical_flow(const mavlink_message_t &msg)
     optflow->handle_msg(msg);
 }
 
+// handle stereo vision messages
+void GCS_MAVLINK::handle_stereovision_odom(const mavlink_message_t *msg)
+{
+    AP_StereoVision *stereovision = AP::stereovision();
+    if (stereovision == nullptr) {
+        return;
+    }
+    stereovision->handle_msg(msg);
+}
 
 /*
   handle MAV_CMD_FIXED_MAG_CAL_YAW
@@ -3355,6 +3365,10 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
 
     case MAVLINK_MSG_ID_OPTICAL_FLOW:
         handle_optical_flow(msg);
+        break;
+
+    case MAVLINK_MSG_ID_STEREO_VISION_ODOM:
+        handle_stereovision_odom(msg);
         break;
 
     case MAVLINK_MSG_ID_DISTANCE_SENSOR:
