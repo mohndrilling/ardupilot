@@ -26,13 +26,13 @@ AP_StereoVision_MAV::AP_StereoVision_MAV(AP_StereoVision &frontend) :
 }
 
 // consume VISIOIN_POSITION_DELTA MAVLink message
-void AP_StereoVision_MAV::handle_msg(mavlink_message_t *msg)
+void AP_StereoVision_MAV::handle_msg(const mavlink_message_t *msg)
 {
     // decode message
-    mavlink_vision_position_delta_t packet;
-    mavlink_msg_vision_position_delta_decode(msg, &packet);
+    mavlink_stereo_vision_odom_t packet;
+    mavlink_msg_stereo_vision_odom_decode(msg, &packet);
 
-    const Vector3f angle_delta(packet.angle_delta[0], packet.angle_delta[1], packet.angle_delta[2]);
-    const Vector3f position_delta(packet.position_delta[0], packet.position_delta[1], packet.position_delta[2]);
-    set_deltas(angle_delta, position_delta, packet.time_delta_usec, packet.confidence);
+    const Vector3f lin_velocity(packet.lin_velocity[0], packet.lin_velocity[1], packet.lin_velocity[2]);
+    const float distance(packet.distance);
+    set_stereovision_odometry(lin_velocity, distance, packet.time_delta_usec, packet.confidence);
 }

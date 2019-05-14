@@ -10,5 +10,5 @@ public:
     AP_StereoVision_MAV(AP_StereoVision &frontend);
 
     // consume VISION_POSITION_DELTA MAVLink message
-    void handle_msg(mavlink_message_t *msg) override;
+    void handle_msg(const mavlink_message_t *msg) override;
 };

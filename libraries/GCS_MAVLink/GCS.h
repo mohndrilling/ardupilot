@@ -429,6 +429,8 @@ protected:
 
     void handle_optical_flow(const mavlink_message_t* msg);
 
+    void handle_stereovision_odom(const mavlink_message_t* msg);
+
     // vehicle-overridable message send function
     virtual bool try_send_message(enum ap_message id);
     virtual void send_global_position_int();
