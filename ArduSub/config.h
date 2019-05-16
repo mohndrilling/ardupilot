@@ -46,6 +46,10 @@
 # define SURFACE_DEPTH_DEFAULT -10.0f // pressure sensor reading 10cm depth means craft is considered surfaced
 #endif
 
+#ifndef NETTRACKING_DIST_DEFAULT
+# define NETTRACKING_DIST_DEFAULT 50 // distanc in cm which ROV is supposed to obtain w.r.t. the fishing net
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 // PWM control
 // default RC speed in Hz

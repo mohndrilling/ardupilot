@@ -36,6 +36,14 @@ const AP_Param::Info Sub::var_info[] = {
     // @User: Standard
     GSCALAR(surface_depth, "SURFACE_DEPTH", SURFACE_DEPTH_DEFAULT),
 
+    // @Param: NETTRACKING_DIST
+    // @DisplayName: Desired distance to the fish net
+    // @Description: Distance to the fish net in centimeters, which the vehicle is supposed to obtain during net tracking
+    // @Units: cm
+    // @Range: 0 200
+    // @User: Standard
+    GSCALAR(nettracking_distance, "NETTRACKING_DIST", NETTRACKING_DIST_DEFAULT),
+
     // @Param: SYSID_SW_MREV
     // @DisplayName: Eeprom format version number
     // @Description: This value is incremented when changes are made to the eeprom format
