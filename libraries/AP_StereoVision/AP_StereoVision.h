@@ -46,6 +46,8 @@ public:
     struct AP_StereoVisionState {
         Vector3f lin_velocity;       // linear velocity with regard to body frame
         float distance;    // distance to nearest poincloud in front
+        float delta_pitch; // difference pitch between the vehicle's heading and the targeted object plane
+        float delta_yaw; // difference yaw between the vehicle's heading and the targeted object plane
         uint64_t time_delta_usec;   // time delta (in usec) between previous and most recent update
         float confidence;           // confidence expressed as a value from 0 (no confidence) to 100 (very confident)
         uint32_t last_sensor_update_ms;    // system time (in milliseconds) of last update from sensor
