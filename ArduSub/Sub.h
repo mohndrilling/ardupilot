@@ -520,6 +520,8 @@ private:
     void md_stabilize_run();
     bool md_althold_init(void);
     void md_althold_run();
+    bool md_net_tracking_init(void);
+    void md_net_tracking_run();
     void control_depth();
     bool manual_init(void);
     void manual_run();

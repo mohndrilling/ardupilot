@@ -43,6 +43,7 @@ enum control_mode_t : uint8_t {
     MOTOR_DETECT = 20,   // Automatically detect motors orientation
     MD_STABILIZE = 40, // STABILIZE mode with absolute yaw angle control
     MD_ALT_HOLD =  41, // DEPTH HOLD mode with absolute yaw angle control
+    MD_NET_TRACKING = 42, // hold specified distance and heading to fish net in front
 };
 
 // Acro Trainer types
