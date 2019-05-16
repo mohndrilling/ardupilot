@@ -37,6 +37,10 @@ bool Sub::set_mode(control_mode_t mode, mode_reason_t reason)
         success = md_althold_init();
         break;
 
+    case MD_NET_TRACKING:
+        success = md_net_tracking_init();
+        break;
+
     case AUTO:
         success = auto_init();
         break;
@@ -127,6 +131,10 @@ void Sub::update_flight_mode()
         md_althold_run();
         break;
 
+    case MD_NET_TRACKING:
+        md_net_tracking_run();
+        break;
+
     case AUTO:
         auto_run();
         break;
@@ -195,6 +203,7 @@ bool Sub::mode_has_manual_throttle(control_mode_t mode)
     case ACRO:
     case STABILIZE:
     case MD_STABILIZE:
+    case MD_NET_TRACKING:
     case MANUAL:
         return true;
     default:
