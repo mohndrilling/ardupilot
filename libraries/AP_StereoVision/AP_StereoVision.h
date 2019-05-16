@@ -76,16 +76,16 @@ public:
 
     static const struct AP_Param::GroupInfo var_info[];
 
-private:
-
-    static AP_StereoVision *_singleton;
-
     // state accessors
     const Vector3f &get_lin_velocity() const { return _state.lin_velocity; }
     const float &get_distance() const { return _state.distance; }
     uint64_t get_time_delta_usec() const { return _state.time_delta_usec; }
     float get_confidence() const { return _state.confidence; }
     uint32_t get_last_update_ms() const { return _state.last_sensor_update_ms; }
+
+private:
+
+    static AP_StereoVision *_singleton;   
 
     // parameters
     AP_Int8 _type;
