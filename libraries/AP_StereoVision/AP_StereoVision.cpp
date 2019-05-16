@@ -89,7 +89,7 @@ void AP_StereoVision::update()
 
     _state.last_processed_sensor_update_ms = _state.last_sensor_update_ms;
 
-    gcs().send_text(MAV_SEVERITY_INFO, "[STEREO_VISION] vx: %5.3f  vy: %5.3f  vz: %5.3f  dist: %5.3f", (double)_state.lin_velocity[0], (double) _state.lin_velocity[1], _state.lin_velocity[2], (double) _state.distance);
+//    gcs().send_text(MAV_SEVERITY_INFO, "[STEREO_VISION] vx: %5.3f  vy: %5.3f  vz: %5.3f  dist: %5.3f", (double)_state.lin_velocity[0], (double) _state.lin_velocity[1], _state.lin_velocity[2], (double) _state.distance);
 
 //    // check for updates
 //    if (_state.last_processed_sensor_update_ms == _state.last_sensor_update_ms) {
