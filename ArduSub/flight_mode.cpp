@@ -37,9 +37,11 @@ bool Sub::set_mode(control_mode_t mode, mode_reason_t reason)
         success = md_althold_init();
         break;
 
+#if STEREOVISION == ENABLED
     case MD_NET_TRACKING:
         success = md_net_tracking_init();
         break;
+#endif
 
     case AUTO:
         success = auto_init();
