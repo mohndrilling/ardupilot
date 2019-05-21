@@ -29,8 +29,8 @@ void AP_StereoVision_Backend::set_stereovision_odometry(const Vector3f &lin_velo
 {
     _frontend._state.lin_velocity = lin_velocity;
     _frontend._state.distance = distance;
-    _frontend._state.delta_pitch = delta_pitch;
-    _frontend._state.delta_yaw = delta_yaw;
+    _frontend._state.delta_pitch = RadiansToCentiDegrees(delta_pitch);
+    _frontend._state.delta_yaw = RadiansToCentiDegrees(delta_yaw);
     _frontend._state.time_delta_usec = time_delta_usec;
     _frontend._state.confidence = confidence;
     _frontend._state.last_sensor_update_ms = AP_HAL::millis();
