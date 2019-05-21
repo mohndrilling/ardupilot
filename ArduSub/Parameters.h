@@ -210,6 +210,10 @@ public:
         k_param_lights_steps,
         k_param_pilot_speed_dn,
 
+        // Net Tracking Mode Parameters
+        k_param_nettracking_distance = 240,
+        k_param_nettracking_velocity,
+
     };
 
     AP_Int16        format_version;
@@ -301,6 +305,10 @@ public:
 
     AP_Float                surface_depth;
     AP_Int8                 frame_configuration;
+
+    // Net tracking parameters
+    AP_Int16 nettracking_distance;
+    AP_Float nettracking_velocity;
 
     // Note: keep initializers here in the same order as they are declared
     // above.

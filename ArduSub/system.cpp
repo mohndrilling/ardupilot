@@ -130,6 +130,11 @@ void Sub::init_ardupilot()
     init_optflow();
 #endif
 
+    // init the stereo vision sensor
+#if STEREOVISION == ENABLED
+    init_stereovision();
+#endif
+
 #if MOUNT == ENABLED
     // initialise camera mount
     camera_mount.init(serial_manager);

@@ -92,6 +92,10 @@
 #include <AP_OpticalFlow/AP_OpticalFlow.h>     // Optical Flow library
 #endif
 
+#if STEREOVISION == ENABLED
+#include <AP_StereoVision/AP_StereoVision.h>     // Stereo Vision library
+#endif
+
 #if RCMAP_ENABLED == ENABLED
 #include <AP_RCMapper/AP_RCMapper.h>        // RC input mapping library
 #endif
@@ -210,7 +214,10 @@ private:
 #if OPTFLOW == ENABLED
     OpticalFlow optflow;
 #endif
-
+    // Optical flow sensor
+#if STEREOVISION == ENABLED
+    AP_StereoVision stereovision;
+#endif
     // system time in milliseconds of last recorded yaw reset from ekf
     uint32_t ekfYawReset_ms = 0;
 
@@ -567,6 +574,8 @@ private:
     void md_stabilize_run();
     bool md_althold_init(void);
     void md_althold_run();
+    bool md_net_tracking_init(void);
+    void md_net_tracking_run();
     bool manual_init(void);
     void manual_run();
     void failsafe_sensors_check(void);
@@ -615,6 +624,10 @@ private:
 #if OPTFLOW == ENABLED
     void init_optflow();
 #endif
+#if STEREOVISION == ENABLED
+    void init_stereovision();
+#endif
+    void perform_net_tracking();
     void terrain_update();
     void terrain_logging();
     bool terrain_use();
@@ -687,6 +700,8 @@ private:
 
     uint32_t last_do_motor_test_fail_ms = 0;
     uint32_t last_do_motor_test_ms = 0;
+
+    uint32_t last_stereo_update_ms = 0;
 
     bool control_check_barometer();
 

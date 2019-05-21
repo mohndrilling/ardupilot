@@ -1,10 +1,12 @@
 #include "AC_PosControl_Sub.h"
+#include "AP_StereoVision/AP_StereoVision.h"
 
 AC_PosControl_Sub::AC_PosControl_Sub(const AP_AHRS_View& ahrs, const AP_InertialNav& inav,
                                      const AP_Motors& motors, AC_AttitudeControl& attitude_control) :
     AC_PosControl(ahrs, inav, motors, attitude_control),
     _alt_max(0.0f),
-    _alt_min(0.0f)
+    _alt_min(0.0f),
+    _pid_dist(POSCONTROL_DIST_P, POSCONTROL_DIST_I, POSCONTROL_DIST_D, POSCONTROL_DIST_IMAX, POSCONTROL_DIST_FILT_HZ, POSCONTROL_DIST_DT)
 {}
 
 /// set_alt_target_from_climb_rate - adjusts target up or down using a climb rate in cm/s
@@ -101,4 +103,28 @@ void AC_PosControl_Sub::relax_alt_hold_controllers()
     _accel_last_z_cms = 0.0f;
     _accel_target.z = -(_ahrs.get_accel_ef_blended().z + GRAVITY_MSS) * 100.0f;
     _flags.reset_accel_to_throttle = true;
+}
+
+void AC_PosControl_Sub::update_dist_controller(float& target_forward, float distance_error, float dt)
+{
+    // simple pid controller for distance control
+    // todo: check if useful to use implemented xy-position controller
+    float p, i, d;
+
+    _pid_dist.set_dt(dt);
+
+    _pid_dist.set_input_filter_all(distance_error);
+
+    // separately calculate p, i, d values for logging
+    // probably better to use square root constrain
+    p = _pid_dist.get_p();
+    p = constrain_float(p, -POSCONTROL_DIST_PMAX, POSCONTROL_DIST_PMAX);
+
+    // get i term
+    i = _pid_dist.get_i();
+
+    // get d term
+    d = _pid_dist.get_d();
+
+    target_forward = p + i + d;
 }

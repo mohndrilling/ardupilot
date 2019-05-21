@@ -42,6 +42,7 @@ enum control_mode_t {
     MANUAL =       19,   // Pass-through input with no stabilization
     MD_STABILIZE =    20, // STABILIZE mode with absolute yaw angle control
     MD_ALT_HOLD =    21, // DEPTH HOLD mode with absolute yaw angle control
+    MD_NET_TRACKING =    22, // hold specified distance and heading to fish net in front
 };
 
 enum mode_reason_t {
@@ -135,6 +136,7 @@ enum LoggingParameters {
 #define MASK_LOG_MOTBATT                (1UL<<17)
 #define MASK_LOG_IMU_FAST               (1UL<<18)
 #define MASK_LOG_IMU_RAW                (1UL<<19)
+#define MASK_LOG_STEREOVISION           (1UL<<20)
 #define MASK_LOG_ANY                    0xFFFF
 
 // GCS failsafe

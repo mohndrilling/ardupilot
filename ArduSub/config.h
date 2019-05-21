@@ -46,6 +46,14 @@
 # define SURFACE_DEPTH_DEFAULT -10.0f // pressure sensor reading 10cm depth means craft is considered surfaced
 #endif
 
+#ifndef NETTRACKING_DIST_DEFAULT
+# define NETTRACKING_DIST_DEFAULT 200 // distance in cm which ROV is supposed to obtain w.r.t. the fishing net
+#endif
+
+#ifndef NETTRACKING_VEL_DEFAULT
+# define NETTRACKING_VEL_DEFAULT 0.1f // Lateral velocity in m/s which the ROV obtains during scanning of fishing net
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 // PWM control
 // default RC speed in Hz
@@ -143,6 +151,12 @@
 //  OPTICAL_FLOW
 #ifndef OPTFLOW
 # define OPTFLOW       DISABLED
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+//  STEREOVISION
+#ifndef STEREOVISION
+# define STEREOVISION       ENABLED
 #endif
 
 //////////////////////////////////////////////////////////////////////////////

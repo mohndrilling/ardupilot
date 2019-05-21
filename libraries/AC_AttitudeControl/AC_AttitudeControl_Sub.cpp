@@ -171,7 +171,7 @@ AC_AttitudeControl_Sub::AC_AttitudeControl_Sub(AP_AHRS_View &ahrs, const AP_Vehi
     _motors_multi(motors),
     _pid_rate_roll(AC_ATC_SUB_RATE_RP_P, AC_ATC_SUB_RATE_RP_I, AC_ATC_SUB_RATE_RP_D, AC_ATC_SUB_RATE_RP_IMAX, AC_ATC_SUB_RATE_RP_FILT_HZ, dt),
     _pid_rate_pitch(AC_ATC_SUB_RATE_RP_P, AC_ATC_SUB_RATE_RP_I, AC_ATC_SUB_RATE_RP_D, AC_ATC_SUB_RATE_RP_IMAX, AC_ATC_SUB_RATE_RP_FILT_HZ, dt),
-	_pid_rate_yaw(AC_ATC_SUB_RATE_YAW_P, AC_ATC_SUB_RATE_YAW_I, AC_ATC_SUB_RATE_YAW_D, AC_ATC_SUB_RATE_YAW_IMAX, AC_ATC_SUB_RATE_YAW_FILT_HZ, dt)
+    _pid_rate_yaw(AC_ATC_SUB_RATE_YAW_P, AC_ATC_SUB_RATE_YAW_I, AC_ATC_SUB_RATE_YAW_D, AC_ATC_SUB_RATE_YAW_IMAX, AC_ATC_SUB_RATE_YAW_FILT_HZ, dt)
 {
     AP_Param::setup_object_defaults(this, var_info);
 
@@ -181,6 +181,9 @@ AC_AttitudeControl_Sub::AC_AttitudeControl_Sub(AP_AHRS_View &ahrs, const AP_Vehi
     _p_angle_yaw.kP().set_default(AC_ATC_SUB_ANGLE_P);
 
     _accel_yaw_max.set_default(AC_ATC_SUB_ACCEL_Y_MAX);
+
+    _pitch_error_filter.set_cutoff_frequency(AC_ATTITUDE_CONTROL_ERROR_CUTOFF_FREQ);
+    _yaw_error_filter.set_cutoff_frequency(AC_ATTITUDE_CONTROL_ERROR_CUTOFF_FREQ);
 }
 
 // Update Alt_Hold angle maximum
@@ -197,6 +200,32 @@ void AC_AttitudeControl_Sub::update_althold_lean_angle_max(float throttle_in)
 
     float althold_lean_angle_max = acosf(constrain_float(_throttle_in/(AC_ATTITUDE_CONTROL_ANGLE_LIMIT_THROTTLE_MAX * thr_max), 0.0f, 1.0f));
     _althold_lean_angle_max = _althold_lean_angle_max + (_dt/(_dt+_angle_limit_tc))*(althold_lean_angle_max-_althold_lean_angle_max);
+}
+
+void AC_AttitudeControl_Sub::input_euler_roll_pitch_yaw_accumulate(float euler_roll_angle_cd, float euler_pitch_angle_offs_cd, float euler_yaw_offs_cd, float dt, bool update_target)
+{
+    if (update_target)
+    {
+        float current_roll, current_pitch, current_yaw;
+
+        Quaternion vehicle_attitude;
+        _ahrs.get_quat_body_to_ned(vehicle_attitude);
+        vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
+
+        // get lowpass filtered pitch and yaw errors
+        float pitch_error = _pitch_error_filter.apply(euler_pitch_angle_offs_cd, dt);
+        float yaw_error = _yaw_error_filter.apply(euler_yaw_offs_cd, dt);
+
+        // take roll target angle directly from absolute input
+        // get pitch and yaw target angle by accumulating input offset to current attitude
+        _target_roll_cd = euler_roll_angle_cd;
+        _target_pitch_cd = RadiansToCentiDegrees(current_pitch) - pitch_error;
+        _target_yaw_cd = RadiansToCentiDegrees(current_yaw) - yaw_error;
+
+        _target_yaw_cd = wrap_180_cd(_target_yaw_cd);
+    }
+
+    input_euler_angle_roll_pitch_yaw(_target_roll_cd, _target_pitch_cd, _target_yaw_cd, true);
 }
 
 void AC_AttitudeControl_Sub::set_throttle_out(float throttle_in, bool apply_angle_boost, float filter_cutoff)
