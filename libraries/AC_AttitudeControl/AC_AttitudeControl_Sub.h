@@ -23,6 +23,8 @@
 #define AC_ATC_SUB_RATE_YAW_IMAX       0.222f
 #define AC_ATC_SUB_RATE_YAW_FILT_HZ    5.0f
 
+#define AC_ATTITUDE_CONTROL_ERROR_CUTOFF_FREQ           4.0f    // low-pass filter on accel error (unit: hz)
+
 class AC_AttitudeControl_Sub : public AC_AttitudeControl {
 public:
     AC_AttitudeControl_Sub(AP_AHRS_View &ahrs, const AP_Vehicle::MultiCopter &aparm, AP_MotorsMulticopter& motors, float dt);
@@ -37,6 +39,9 @@ public:
 
     // Update Alt_Hold angle maximum
     void update_althold_lean_angle_max(float throttle_in) override;
+
+    // Command absolute euler roll, pitch, yaw. Accumulate yaw and pitch to current attitude.
+    void input_euler_roll_pitch_yaw_accumulate(float euler_roll_angle_cd, float euler_pitch_angle_offs_cd, float euler_yaw_offs_cd, float dt, bool update_target);
 
     // Set output throttle
     void set_throttle_out(float throttle_in, bool apply_angle_boost, float filt_cutoff) override;
@@ -76,7 +81,14 @@ protected:
     AC_PID                _pid_rate_pitch;
     AC_PID                _pid_rate_yaw;
 
+    LowPassFilterFloat _pitch_error_filter; // applied on pitch errors retrieved from stereo vision module
+    LowPassFilterFloat _yaw_error_filter; // applied on yaw errors retrieved from stereo vision module
+
     AP_Float              _thr_mix_man;     // throttle vs attitude control prioritisation used when using manual throttle (higher values mean we prioritise attitude control over throttle)
     AP_Float              _thr_mix_min;     // throttle vs attitude control prioritisation used when landing (higher values mean we prioritise attitude control over throttle)
     AP_Float              _thr_mix_max;     // throttle vs attitude control prioritisation used during active flight (higher values mean we prioritise attitude control over throttle)
+
+    float _target_roll_cd;
+    float _target_pitch_cd;
+    float _target_yaw_cd;
 };

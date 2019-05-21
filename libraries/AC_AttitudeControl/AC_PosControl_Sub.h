@@ -2,10 +2,19 @@
 
 #include "AC_PosControl.h"
 
+// distance controller default definitions
+# define POSCONTROL_DIST_P                    0.3f    // distance controller P gain default
+# define POSCONTROL_DIST_I                    3.0f    // distance controller I gain default
+# define POSCONTROL_DIST_D                    0.0f    // distance controller D gain default
+# define POSCONTROL_DIST_IMAX                 0.01f     // distance controller IMAX gain default
+# define POSCONTROL_DIST_FILT_HZ              10.0f   // distance controller input filter default
+# define POSCONTROL_DIST_DT                   0.01f   // distance controller dt default
+# define POSCONTROL_DIST_PMAX                 0.15f   // distance controller PMAX gain default
+
 class AC_PosControl_Sub : public AC_PosControl {
 public:
     AC_PosControl_Sub(AP_AHRS_View & ahrs, const AP_InertialNav& inav,
-                      const AP_Motors& motors, AC_AttitudeControl& attitude_control);
+                      AP_Motors& motors, AC_AttitudeControl& attitude_control);
 
     /// set_alt_max - sets maximum altitude above the ekf origin in cm
     ///   only enforced when set_alt_target_from_climb_rate is used
@@ -40,7 +49,16 @@ public:
     ///     integrator is not reset
     void relax_alt_hold_controllers();
 
+    /// control distance to net
+    void update_dist_controller(float& target_forward, float distance_error, float dt);
+
 private:
     float       _alt_max; // max altitude - should be updated from the main code with altitude limit from fence
     float       _alt_min; // min altitude - should be updated from the main code with altitude limit from fence
+
+    float       _net_track_dist; // desired distance of vehicle to tracked net in meters
+
+    AC_PID      _pid_dist; // distance controller
+
+
 };

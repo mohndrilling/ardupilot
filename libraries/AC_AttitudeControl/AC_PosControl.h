@@ -46,7 +46,7 @@ public:
 
     /// Constructor
     AC_PosControl(AP_AHRS_View& ahrs, const AP_InertialNav& inav,
-                  const AP_Motors& motors, AC_AttitudeControl& attitude_control);
+                  AP_Motors& motors, AC_AttitudeControl& attitude_control);
 
     ///
     /// initialisation functions
@@ -377,7 +377,7 @@ protected:
     // references to inertial nav and ahrs libraries
     AP_AHRS_View &        _ahrs;
     const AP_InertialNav&       _inav;
-    const AP_Motors&            _motors;
+    AP_Motors&            _motors;
     AC_AttitudeControl&         _attitude_control;
 
     // parameters
