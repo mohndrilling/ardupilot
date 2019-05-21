@@ -627,6 +627,7 @@ private:
 #if STEREOVISION == ENABLED
     void init_stereovision();
 #endif
+    void perform_net_tracking();
     void terrain_update();
     void terrain_logging();
     bool terrain_use();
@@ -699,6 +700,8 @@ private:
 
     uint32_t last_do_motor_test_fail_ms = 0;
     uint32_t last_do_motor_test_ms = 0;
+
+    uint32_t last_stereo_update_ms = 0;
 
     bool control_check_barometer();
 

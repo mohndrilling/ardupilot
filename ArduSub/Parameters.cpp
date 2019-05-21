@@ -40,9 +40,18 @@ const AP_Param::Info Sub::var_info[] = {
     // @DisplayName: Desired distance to the fish net
     // @Description: Distance to the fish net in centimeters, which the vehicle is supposed to obtain during net tracking
     // @Units: cm
-    // @Range: 0 200
+    // @Range: 0 300
     // @User: Standard
     GSCALAR(nettracking_distance, "NETTRACKING_DIST", NETTRACKING_DIST_DEFAULT),
+
+
+    // @Param: NETTRACKING_VEL
+    // @DisplayName: Lateral velocity during scan of fish net
+    // @Description: Lateral velocity of the vehicle during scan of fish net
+    // @Units: m/s
+    // @Range: 0 0.2
+    // @User: Standard
+    GSCALAR(nettracking_velocity, "NETTRACKING_VEL", NETTRACKING_VEL_DEFAULT),
 
     // @Param: SYSID_SW_MREV
     // @DisplayName: Eeprom format version number

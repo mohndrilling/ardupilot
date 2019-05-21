@@ -47,7 +47,11 @@
 #endif
 
 #ifndef NETTRACKING_DIST_DEFAULT
-# define NETTRACKING_DIST_DEFAULT 50 // distanc in cm which ROV is supposed to obtain w.r.t. the fishing net
+# define NETTRACKING_DIST_DEFAULT 200 // distance in cm which ROV is supposed to obtain w.r.t. the fishing net
+#endif
+
+#ifndef NETTRACKING_VEL_DEFAULT
+# define NETTRACKING_VEL_DEFAULT 0.1f // Lateral velocity in m/s which the ROV obtains during scanning of fishing net
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
