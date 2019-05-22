@@ -148,20 +148,12 @@ void Sub::perform_net_tracking()
     }
     else
     {
-        // if the distance is too large, the vehicle adjust it's lateral motion and attitude according to pilot commands
-        // convert pilot input to lean angles
-        float target_roll, target_pitch, target_yaw;
-        get_pilot_desired_lean_angles(channel_roll->get_control_in(), channel_pitch->get_control_in(), target_roll, target_pitch, aparm.angle_max);
-
-        // get pilot's desired yaw rate
-        target_yaw = get_pilot_desired_yaw_angle(channel_yaw->get_control_in());
-
+        // if the distance is too large, the vehicle is supposed to obtain the current attitude and to not move laterally
         // call attitude controller
-        // update attitude controller targets
-        attitude_control.input_euler_angle_roll_pitch_yaw(target_roll, target_pitch, target_yaw, true);
+        attitude_control.input_euler_roll_pitch_yaw_accumulate(0.0f, 0.0f, 0.0f, dt, false);
 
-        // set commands for lateral motion
-        motors.set_lateral(channel_lateral->norm_input());
+        // no lateral movement
+        motors.set_lateral(0.0f);
     }
 
 }
