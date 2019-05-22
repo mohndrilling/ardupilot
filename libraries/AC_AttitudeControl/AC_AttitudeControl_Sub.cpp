@@ -182,8 +182,8 @@ AC_AttitudeControl_Sub::AC_AttitudeControl_Sub(AP_AHRS_View &ahrs, const AP_Vehi
 
     _accel_yaw_max.set_default(AC_ATC_SUB_ACCEL_Y_MAX);
 
-    _pitch_error_filter.set_cutoff_frequency(AC_ATTITUDE_CONTROL_ERROR_CUTOFF_FREQ);
-    _yaw_error_filter.set_cutoff_frequency(AC_ATTITUDE_CONTROL_ERROR_CUTOFF_FREQ);
+    _pitch_error_filter.set_cutoff_frequency(AC_ATTITUDE_CONTROL_PITCH_ERROR_CUTOFF_FREQ);
+    _yaw_error_filter.set_cutoff_frequency(AC_ATTITUDE_CONTROL_YAW_ERROR_CUTOFF_FREQ);
 }
 
 // Update Alt_Hold angle maximum
