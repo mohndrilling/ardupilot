@@ -23,7 +23,8 @@
 #define AC_ATC_SUB_RATE_YAW_IMAX       0.222f
 #define AC_ATC_SUB_RATE_YAW_FILT_HZ    5.0f
 
-#define AC_ATTITUDE_CONTROL_ERROR_CUTOFF_FREQ           4.0f    // low-pass filter on accel error (unit: hz)
+#define AC_ATTITUDE_CONTROL_PITCH_ERROR_CUTOFF_FREQ           3.0f    // low-pass filter on accel error (unit: hz)
+#define AC_ATTITUDE_CONTROL_YAW_ERROR_CUTOFF_FREQ             3.0f    // low-pass filter on accel error (unit: hz)
 
 class AC_AttitudeControl_Sub : public AC_AttitudeControl {
 public:
