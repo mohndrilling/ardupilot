@@ -81,6 +81,16 @@ MAV_STATE GCS_MAVLINK_Sub::system_status() const
     return MAV_STATE_STANDBY;
 }
 
+// handle stereo vision messages
+void GCS_MAVLINK_Sub::handle_stereovision_odom(const mavlink_message_t *msg)
+{
+    AP_StereoVision *stereovision = AP::stereovision();
+    if (stereovision == nullptr) {
+        return;
+    }
+    stereovision->handle_msg(msg);
+}
+
 void GCS_MAVLINK_Sub::send_nav_controller_output() const
 {
     const Vector3f &targets = sub.attitude_control.get_att_target_euler_cd();
@@ -781,6 +791,10 @@ void GCS_MAVLINK_Sub::handleMessage(mavlink_message_t* msg)
             sub.leak_detector.set_detect();
         }
     }
+        break;         
+
+    case MAVLINK_MSG_ID_STEREO_VISION_ODOM:
+        handle_stereovision_odom(msg);
         break;
 
     default:
