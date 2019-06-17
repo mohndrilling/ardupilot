@@ -39,7 +39,7 @@ enum ioevents {
 
 // max number of consecutve protocol failures we accept before raising
 // an error
-#define IOMCU_MAX_REPEATED_FAILURES 20
+#define IOMCU_MAX_REPEATED_FAILURES 100
 
 AP_IOMCU::AP_IOMCU(AP_HAL::UARTDriver &_uart) :
     uart(_uart)
