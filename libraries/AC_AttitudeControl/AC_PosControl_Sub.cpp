@@ -94,7 +94,9 @@ void AC_PosControl_Sub::set_alt_target_from_climb_rate_ff(float climb_rate_cms, 
 /// relax_alt_hold_controllers - set all desired and targets to measured
 void AC_PosControl_Sub::relax_alt_hold_controllers()
 {
-    _pos_target.z = _inav.get_altitude();
+    // set altitude buffer;
+    float alt_buffer = _inav.get_velocity_z() * _alt_brake_tc;
+    _pos_target.z = _inav.get_altitude() + alt_buffer;
     _vel_desired.z = 0.0f;
     _flags.use_desvel_ff_z = false;
     _vel_target.z = _inav.get_velocity_z();

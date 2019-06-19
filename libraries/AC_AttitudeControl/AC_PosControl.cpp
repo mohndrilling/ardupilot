@@ -176,7 +176,16 @@ const AP_Param::GroupInfo AC_PosControl::var_info[] = {
     // @Range: 0 45
     // @Increment: 1
     // @User: Advanced
-    AP_GROUPINFO("_ANGLE_MAX", 7, AC_PosControl, _lean_angle_max, 0.0f),
+    AP_GROUPINFO("_ANGLE_MAX", 7, AC_PosControl, _lean_angle_max, 0.0f),    
+
+    // @Param: _ALT_BRAKE_TC
+    // @DisplayName: Position Control Braking time constant
+    // @Description: Larger values lead to softer deceleration after pilot stops sending throttle commands
+    // @Units: seconds
+    // @Range: 0 2
+    // @Increment: 1
+    // @User: Advanced
+    AP_GROUPINFO("_ALT_BRAKE_TC", 8, AC_PosControl, _alt_brake_tc, 0.5f),
 
     AP_GROUPEND
 };

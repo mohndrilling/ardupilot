@@ -376,6 +376,7 @@ protected:
     // parameters
     AP_Float    _accel_xy_filt_hz;      // XY acceleration filter cutoff frequency
     AP_Float    _lean_angle_max;        // Maximum autopilot commanded angle (in degrees). Set to zero for Angle Max
+    AP_Float    _alt_brake_tc;          // Time Constant for deceleration during depth control
     AC_P        _p_pos_z;
     AC_P        _p_vel_z;
     AC_PID      _pid_accel_z;
