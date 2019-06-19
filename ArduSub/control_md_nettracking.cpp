@@ -50,18 +50,18 @@ void Sub::md_net_tracking_run()
     }
     else {
         // target attitude from pilot commands
-        float target_roll, target_pitch, target_yaw;
+        float target_roll, target_pitch, target_yaw_rate;
 
         // convert pilot input to lean angles
         // To-Do: convert get_pilot_desired_lean_angles to return angles as floats
         get_pilot_desired_lean_angles(channel_roll->get_control_in(), channel_pitch->get_control_in(), target_roll, target_pitch, aparm.angle_max);
 
         // get pilot's desired yaw rate
-        target_yaw = get_pilot_desired_yaw_angle(channel_yaw->get_control_in());
+        target_yaw_rate = get_pilot_desired_yaw_angle(channel_yaw->get_control_in());
 
         // call attitude controller
         // update attitude controller targets
-        attitude_control.input_euler_angle_roll_pitch_yaw(target_roll, target_pitch, target_yaw, true);
+        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate);
 
         // set commands for forward and lateral motion
         motors.set_forward(channel_forward->norm_input());
@@ -117,6 +117,11 @@ void Sub::perform_net_tracking()
     // time difference (in seconds) between two measurements from stereo vision is used to lowpass filter the data
     float dt = stereovision.get_time_delta_usec() / 1000000.0f;
 
+    if (dt > 2.0f)
+    {
+        attitude_control.reset_yaw_err_filter();
+    }
+
     // only update target distance and attitude, if new measurement from stereo data available
     bool update_target = stereovision.get_last_update_ms() - last_stereo_update_ms != 0;
 
@@ -138,6 +143,10 @@ void Sub::perform_net_tracking()
         // get pitch and yaw offset (in centidegrees) with regard to the faced object (net) in front
         float target_pitch_error = stereovision.get_delta_pitch();
         float target_yaw_error = stereovision.get_delta_yaw();
+
+        // assume concave net shape -> only allow increasing/decreasing of yaw error w.r.t. the direction of movement
+        float scan_dir = is_negative(g.nettracking_velocity) ? -1.0f : 1.0f;
+        target_yaw_error = scan_dir * target_yaw_error < 0 ? target_yaw_error : 0;
 
         // the target values will be ignored, if no new stereo vision data received (update_target = false)
         // this will update the target attitude corresponding to the current errors and trigger the attitude controller
