@@ -1,4 +1,10 @@
 #include "Sub.h"
+#include <GCS_MAVLink/GCS.h>
+
+
+static uint8_t debug_counter = 0;
+static int debug_freq = 10;
+static int debug_cnt_limit = int(400 / float(debug_freq));
 
 //md_althold_init - initialise attitude and position controllers
 bool Sub::md_althold_init()
@@ -35,9 +41,9 @@ void Sub::md_althold_run()
     // if not armed set throttle to zero and exit immediately
     if (!motors.armed()) {
         motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
-        attitude_control.set_throttle_out(0,true,g.throttle_filt);
+        attitude_control.set_throttle_out(0,false,g.throttle_filt);
         attitude_control.relax_attitude_controllers();
-        pos_control.relax_alt_hold_controllers(motors.get_throttle_hover());
+        pos_control.relax_alt_hold_controllers();
         last_pilot_heading = ahrs.yaw_sensor;
         return;
     }
@@ -61,7 +67,8 @@ void Sub::md_althold_run()
     static bool lastVelocityZWasNegative = false;
     if (fabsf(channel_throttle->norm_input()-0.5f) > 0.05f) { // Throttle input above 5%
         // output pilot's throttle
-        attitude_control.set_throttle_out(channel_throttle->norm_input(), false, g.throttle_filt);
+        attitude_control.set_throttle_out(channel_throttle->norm_input() + motors.get_throttle_hover() - 0.5f, false, g.throttle_filt);
+
         // reset z targets to current values
         pos_control.relax_alt_hold_controllers();
         engageStopZ = true;

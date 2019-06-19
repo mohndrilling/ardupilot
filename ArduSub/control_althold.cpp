@@ -39,9 +39,9 @@ void Sub::althold_run()
     if (!motors.armed()) {
         motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
         // Sub vehicles do not stabilize roll/pitch/yaw when not auto-armed (i.e. on the ground, pilot has never raised throttle)
-        attitude_control.set_throttle_out(0,true,g.throttle_filt);
+        attitude_control.set_throttle_out(0,false,g.throttle_filt);
         attitude_control.relax_attitude_controllers();
-        pos_control.relax_alt_hold_controllers(motors.get_throttle_hover());
+        pos_control.relax_alt_hold_controllers();
         last_pilot_heading = ahrs.yaw_sensor;
         return;
     }
@@ -102,7 +102,8 @@ void Sub::althold_run()
     static bool lastVelocityZWasNegative = false;
     if (fabsf(channel_throttle->norm_input()-0.5f) > 0.05f) { // Throttle input above 5%
         // output pilot's throttle
-        attitude_control.set_throttle_out(channel_throttle->norm_input(), false, g.throttle_filt);
+        attitude_control.set_throttle_out(channel_throttle->norm_input() + motors.get_throttle_hover() - 0.5f, false, g.throttle_filt);
+
         // reset z targets to current values
         pos_control.relax_alt_hold_controllers();
         engageStopZ = true;
