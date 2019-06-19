@@ -235,7 +235,11 @@ void AP_Motors6DOF::output_min()
 
 int16_t AP_Motors6DOF::calc_thrust_to_pwm(float thrust_in) const
 {
-    return constrain_int16(1500 + thrust_in * 400, _throttle_radio_min, _throttle_radio_max);
+    // sanity check
+    float pwm_min, pwm_max;
+    pwm_min = constrain_int16(_pwm_min, 1100, 1400);
+    pwm_max = constrain_int16(_pwm_max, 1600, 1900);
+    return constrain_int16(1500 + thrust_in * 400, pwm_min, pwm_max);
 }
 
 void AP_Motors6DOF::output_to_motors()
