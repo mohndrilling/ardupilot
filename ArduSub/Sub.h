@@ -604,7 +604,8 @@ private:
     void set_bottomed(bool at_bottom);
     bool init_arm_motors(AP_Arming::Method method);
     void init_disarm_motors();
-    void motors_output();
+    void motors_output();    
+    void update_throttle_hover();
     Vector3f pv_location_to_vector(const Location& loc);
     float pv_alt_above_origin(float alt_above_home_cm);
     void init_rc_in();

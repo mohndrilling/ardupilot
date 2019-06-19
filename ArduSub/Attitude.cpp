@@ -124,6 +124,29 @@ float Sub::get_pilot_desired_climb_rate(float throttle_control)
     return desired_rate;
 }
 
+// update estimated throttle required to hover (if necessary)
+//  called at 100hz
+void Sub::update_throttle_hover()
+{
+    // if not armed or landed exit
+    if (!motors.armed()) {
+        return;
+    }
+
+    // do not update while climbing or descending
+    if (!is_zero(pos_control.get_desired_velocity().z)) {
+        return;
+    }
+
+    // get throttle output
+    float throttle = motors.get_throttle();
+
+    // calc average throttle if we are in a level hover
+    if (throttle > 0.0f && abs(inertial_nav.get_velocity_z()) < 5) {
+        motors.update_throttle_hover(0.01f);
+    }
+}
+
 // get_surface_tracking_climb_rate - hold vehicle at the desired distance above the ground
 //      returns climb rate (in cm/s) which should be passed to the position controller
 float Sub::get_surface_tracking_climb_rate(int16_t target_rate, float current_alt_target, float dt)
