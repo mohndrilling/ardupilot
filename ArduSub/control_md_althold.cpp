@@ -1,11 +1,6 @@
 #include "Sub.h"
 #include <GCS_MAVLink/GCS.h>
 
-
-static uint8_t debug_counter = 0;
-static int debug_freq = 10;
-static int debug_cnt_limit = int(400 / float(debug_freq));
-
 //md_althold_init - initialise attitude and position controllers
 bool Sub::md_althold_init()
 {
