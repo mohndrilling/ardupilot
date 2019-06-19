@@ -23,9 +23,6 @@
 #define AC_ATC_SUB_RATE_YAW_IMAX       0.222f
 #define AC_ATC_SUB_RATE_YAW_FILT_HZ    5.0f
 
-#define AC_ATTITUDE_CONTROL_PITCH_ERROR_CUTOFF_FREQ           3.0f    // low-pass filter on accel error (unit: hz)
-#define AC_ATTITUDE_CONTROL_YAW_ERROR_CUTOFF_FREQ             3.0f    // low-pass filter on accel error (unit: hz)
-
 class AC_AttitudeControl_Sub : public AC_AttitudeControl {
 public:
     AC_AttitudeControl_Sub(AP_AHRS_View &ahrs, const AP_Vehicle::MultiCopter &aparm, AP_MotorsMulticopter& motors, float dt);
@@ -56,6 +53,8 @@ public:
     void set_throttle_mix_min() override { _throttle_rpy_mix_desired = _thr_mix_min; }
     void set_throttle_mix_man() override { _throttle_rpy_mix_desired = _thr_mix_man; }
     void set_throttle_mix_max() override { _throttle_rpy_mix_desired = _thr_mix_max; }
+
+    void reset_yaw_err_filter() { _yaw_error_filter.reset(); }
 
     // are we producing min throttle?
     bool is_throttle_mix_min() const override { return (_throttle_rpy_mix < 1.25f*_thr_mix_min); }

@@ -42,6 +42,9 @@
 
 #define AC_ATTITUDE_CONTROL_THR_MIX_DEFAULT             0.5f  // ratio controlling the max throttle output during competing requests of low throttle from the pilot (or autopilot) and higher throttle for attitude control.  Higher favours Attitude over pilot input
 
+#define AC_ATTITUDE_CONTROL_PITCH_ERROR_CUTOFF_FREQ           3.0f    // low-pass filter on accel error (unit: hz)
+#define AC_ATTITUDE_CONTROL_YAW_ERROR_CUTOFF_FREQ             0.005f    // low-pass filter on accel error (unit: hz)
+
 class AC_AttitudeControl {
 public:
     AC_AttitudeControl( AP_AHRS_View &ahrs,
@@ -363,6 +366,9 @@ protected:
 
     // rate controller input smoothing time constant
     AP_Float            _input_tc;
+
+    // net tracking
+    AP_Float            _yaw_filter_cut_off;
 
     // Intersampling period in seconds
     float               _dt;
