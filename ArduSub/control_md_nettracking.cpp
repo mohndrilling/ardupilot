@@ -18,6 +18,9 @@ bool Sub::md_net_tracking_init()
 
     last_pilot_heading = ahrs.yaw_sensor;
 
+    // set control frame to 'body'
+    g.control_frame = CF_Body;
+
     return true;
 }
 
@@ -42,30 +45,69 @@ void Sub::md_net_tracking_run()
     motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
 
+    // place holders for translational commands
+    float forward_out, lateral_out;
+
+    //threshold for pilot input commands
+    float inp_threshold = 0.05f;
+
+    // whether there are any pilot commands
+    bool pilot_in =  fabsf(channel_throttle->norm_input()-0.5f) > inp_threshold
+                 || fabsf(channel_forward->norm_input()) > inp_threshold
+                 || fabsf(channel_lateral->norm_input()) > inp_threshold;
+
     ///////////// Attitude and Distance Control ////////////////////////
     // if stereovision keeps receiving heading and distance information from stereo camera data via mavlink, run distance and attitude controllers
     if (stereovision.healthy())
     {
-        perform_net_tracking();
+        perform_net_tracking(forward_out, lateral_out);
+
+        // overwrite forward command if it is sent by pilot
+        if (fabsf(channel_forward->norm_input()) > inp_threshold)
+            forward_out = channel_forward->norm_input();
+
+        // overwrite lateral command, if there are any pilot inputs (-> hence the lateral scanning motion is stopped during pilot inputs)
+        if ( pilot_in )
+            lateral_out = channel_lateral->norm_input();
+
     }
     else {
+        // get current time
+        uint32_t tnow = AP_HAL::millis();
+
         // target attitude from pilot commands
         float target_roll, target_pitch, target_yaw_rate;
 
         // convert pilot input to lean angles
-        // To-Do: convert get_pilot_desired_lean_angles to return angles as floats
         get_pilot_desired_lean_angles(channel_roll->get_control_in(), channel_pitch->get_control_in(), target_roll, target_pitch, aparm.angle_max);
 
         // get pilot's desired yaw rate
-        target_yaw_rate = get_pilot_desired_yaw_angle(channel_yaw->get_control_in());
+        target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->get_control_in());
 
         // call attitude controller
-        // update attitude controller targets
-        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate);
+        if (!is_zero(target_yaw_rate)) { // call attitude controller with rate yaw determined by pilot input
+            attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate);
+            last_pilot_heading = ahrs.yaw_sensor;
+            last_pilot_yaw_input_ms = tnow; // time when pilot last changed heading
 
-        // set commands for forward and lateral motion
-        motors.set_forward(channel_forward->norm_input());
-        motors.set_lateral(channel_lateral->norm_input());
+        } else { // hold current heading
+            // this check is required to prevent bounce back after very fast yaw maneuvers
+            // the inertia of the vehicle causes the heading to move slightly past the point when pilot input actually stopped
+            if (tnow < last_pilot_yaw_input_ms + 250) { // give 250ms to slow down, then set target heading
+                target_yaw_rate = 0; // Stop rotation on yaw axis
+
+                // call attitude controller with target yaw rate = 0 to decelerate on yaw axis
+                attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate);
+                last_pilot_heading = ahrs.yaw_sensor; // update heading to hold
+
+            } else { // call attitude controller holding absolute absolute bearing
+                attitude_control.input_euler_angle_roll_pitch_yaw(target_roll, target_pitch, last_pilot_heading, true);
+            }
+        }
+
+        // set pilot input commands
+        forward_out = channel_forward->norm_input();
+        lateral_out = channel_lateral->norm_input();
     }
 
     ///////////// Depth Control ////////////////////////////////////////
@@ -73,9 +115,15 @@ void Sub::md_net_tracking_run()
     static bool engageStopZ = true;
     // Get last user velocity direction to check for zero derivative points
     static bool lastVelocityZWasNegative = false;
-    if (fabsf(channel_throttle->norm_input()-0.5f) > 0.05f) { // Throttle input above 5%
-        // output pilot's throttle
-        attitude_control.set_throttle_out(channel_throttle->norm_input(), false, g.throttle_filt);
+
+    if ( pilot_in ) { // Pilot input above 5%
+
+        // disable depth control
+        // the throttle for hovering will be applied along inertial z-axis
+        // all of the remaining pilot inputs will be added up on top of that applied to the axes corresponding to the current control frame
+        // see update_control_frame in motors.cpp and output_armed_stabilizing_vectored_6dof() in Motors6DOF.cpp
+        attitude_control.set_throttle_out(motors.get_throttle_hover(), false, g.throttle_filt);
+
         // reset z targets to current values
         pos_control.relax_alt_hold_controllers();
         engageStopZ = true;
@@ -102,10 +150,15 @@ void Sub::md_net_tracking_run()
 
         pos_control.update_z_controller();
     }
+
+    // output pilot's translational motion commmands
+    motors.set_pilot_throttle(channel_throttle->norm_input() - 0.5f);
+    motors.set_forward(forward_out);
+    motors.set_lateral(lateral_out);
 }
 
 // net tracking logic
-void Sub::perform_net_tracking()
+void Sub::perform_net_tracking(float &forward_out, float &lateral_out)
 {
     // retrieve current distance from stereovision module
     float cur_dist = stereovision.get_distance();
@@ -126,13 +179,8 @@ void Sub::perform_net_tracking()
     bool update_target = stereovision.get_last_update_ms() - last_stereo_update_ms != 0;
 
     // get forward command from distance controller
-    if (update_target)
-    {
-        last_stereo_update_ms = stereovision.get_last_update_ms();
-        float target_forward;
-        pos_control.update_dist_controller(target_forward, dist_error, dt);
-        motors.set_forward(target_forward);
-    }
+    last_stereo_update_ms = stereovision.get_last_update_ms();
+    pos_control.update_dist_controller(forward_out, dist_error, dt, update_target);
 
     // if distance error is small enough, use the stereovision heading data to always orientate the vehicle normal to the faced object surface
     if (abs(dist_error) < 0.3)
@@ -148,12 +196,15 @@ void Sub::perform_net_tracking()
         float scan_dir = is_negative(g.nettracking_velocity) ? -1.0f : 1.0f;
         target_yaw_error = scan_dir * target_yaw_error < 0 ? target_yaw_error : 0;
 
+        // only change pitch when changing altitude
+        target_pitch_error = fabsf(channel_throttle->norm_input()-0.5f) > 0.05f ? target_pitch_error : 0.0f;
+
         // the target values will be ignored, if no new stereo vision data received (update_target = false)
         // this will update the target attitude corresponding to the current errors and trigger the attitude controller
         attitude_control.input_euler_roll_pitch_yaw_accumulate(target_roll, target_pitch_error, target_yaw_error, dt, update_target);
 
         // set commands for lateral motion
-        motors.set_lateral(g.nettracking_velocity);
+        lateral_out = g.nettracking_velocity;
     }
     else
     {
@@ -162,7 +213,7 @@ void Sub::perform_net_tracking()
         attitude_control.input_euler_roll_pitch_yaw_accumulate(0.0f, 0.0f, 0.0f, dt, false);
 
         // no lateral movement
-        motors.set_lateral(0.0f);
+        lateral_out = 0.0f;
     }
 
 }

@@ -576,7 +576,7 @@ private:
 #if STEREOVISION == ENABLED
     void init_stereovision();
 #endif
-    void perform_net_tracking();
+    void perform_net_tracking(float &forward_out, float &lateral_out);
     void terrain_update();
     void terrain_logging();
     void init_ardupilot() override;
