@@ -56,8 +56,8 @@ void Sub::md_althold_run()
     // run depth control (implemented in control_althold.cpp)
     control_depth();
 
-    //control_in is range -1000-1000
-    //radio_in is raw pwm value
+    // output pilot's translational motion commmands
+    motors.set_pilot_throttle(channel_throttle->norm_input() - 0.5f);
     motors.set_forward(channel_forward->norm_input());
     motors.set_lateral(channel_lateral->norm_input());
 }

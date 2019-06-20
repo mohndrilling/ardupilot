@@ -552,6 +552,7 @@ private:
     void set_surfaced(bool at_surface);
     void set_bottomed(bool at_bottom);
     void motors_output();
+    void update_control_frame();
     void update_throttle_hover();
     Vector3f pv_location_to_vector(const Location& loc);
     float pv_alt_above_origin(float alt_above_home_cm);
@@ -650,6 +651,7 @@ private:
 
     uint32_t last_do_motor_test_fail_ms = 0;
     uint32_t last_do_motor_test_ms = 0;
+    uint32_t last_control_frame_fail = 0;
 
     uint32_t last_stereo_update_ms = 0;
 
