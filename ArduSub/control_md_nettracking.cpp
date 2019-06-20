@@ -44,6 +44,8 @@ void Sub::md_net_tracking_run()
 
     motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
+    // get current time
+    uint32_t tnow = AP_HAL::millis();
 
     // place holders for translational commands
     float forward_out, lateral_out;
@@ -70,11 +72,12 @@ void Sub::md_net_tracking_run()
         if ( pilot_in )
             lateral_out = channel_lateral->norm_input();
 
+        // update the heading, the vehicle keeps the current heading after loosing input data from stereovision library
+        last_pilot_heading = ahrs.yaw_sensor;
+        last_pilot_yaw_input_ms = tnow; // time when pilot last changed heading
+
     }
     else {
-        // get current time
-        uint32_t tnow = AP_HAL::millis();
-
         // target attitude from pilot commands
         float target_roll, target_pitch, target_yaw_rate;
 
