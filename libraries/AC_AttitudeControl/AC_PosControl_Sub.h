@@ -50,7 +50,7 @@ public:
     void relax_alt_hold_controllers();
 
     /// control distance to net
-    void update_dist_controller(float& target_forward, float distance_error, float dt);
+    void update_dist_controller(float& target_forward, float distance_error, float dt, bool update);
 
 private:
     float       _alt_max; // max altitude - should be updated from the main code with altitude limit from fence
