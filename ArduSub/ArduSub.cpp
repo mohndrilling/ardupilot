@@ -114,6 +114,9 @@ void Sub::fast_loop()
         attitude_control.rate_controller_run();
     }
 
+    // inform motor classes about the current control frame
+    update_control_frame();
+
     // send outputs to the motors library
     motors_output();
 

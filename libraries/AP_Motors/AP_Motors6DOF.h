@@ -35,6 +35,14 @@ public:
     // Override parent
     void output_min() override;
 
+    void set_pilot_throttle(float pilot_throttle_in) { _pilot_throttle_in = -pilot_throttle_in; }
+
+    // set vehicle attitude (to perform proper control allocation of the throttle commands)
+    void set_vehicle_attitude(Matrix3f body_to_ned_rot_mat) { _vehicle_attitude = body_to_ned_rot_mat; }
+
+    // set the coordinate frame, in which translational movement commands are supposed to be interpreted
+    void set_control_frame(Matrix3f control_frame) { _control_frame = control_frame; }
+
     // Map thrust input -1~1 to pwm output 1100~1900
     int16_t calc_thrust_to_pwm(float thrust_in) const;
 
@@ -58,19 +66,28 @@ protected:
     // Parameters
     AP_Int8             _motor_reverse[AP_MOTORS_MAX_NUM_MOTORS];
     AP_Float            _forwardVerticalCouplingFactor;
-    AP_Int8             _move_wrt_ned;
 
-    // motor's contribution to linear velocity w.r.t. the body frame
+    // motor's contribution to linear velocity w.r.t. the body frame (static)
     float               _throttle_factor[AP_MOTORS_MAX_NUM_MOTORS]; // each motors contribution to throttle (climb/descent)
     float               _forward_factor[AP_MOTORS_MAX_NUM_MOTORS]; // each motors contribution to forward/backward
     float               _lateral_factor[AP_MOTORS_MAX_NUM_MOTORS];  // each motors contribution to lateral (left/right)
 
-    // motor's contribution to linear velocity w.r.t. the inertial frame
+    // motor's contribution to the inertial z-axis (dynamic)
     float               _inertial_throttle_factor[AP_MOTORS_MAX_NUM_MOTORS]; // each motors contribution to throttle (climb/descent)
-    float               _inertial_forward_factor[AP_MOTORS_MAX_NUM_MOTORS]; // each motors contribution to forward/backward
-    float               _inertial_lateral_factor[AP_MOTORS_MAX_NUM_MOTORS];  // each motors contribution to lateral (left/right)
+
+    // motor's contribution to linear velocity w.r.t. the current control frame (dynamic)
+    float               _cf_throttle_factor[AP_MOTORS_MAX_NUM_MOTORS]; // each motors contribution to throttle (climb/descent)
+    float               _cf_forward_factor[AP_MOTORS_MAX_NUM_MOTORS]; // each motors contribution to forward/backward
+    float               _cf_lateral_factor[AP_MOTORS_MAX_NUM_MOTORS];  // each motors contribution to lateral (left/right)
 
     // current limiting
     float _output_limited = 1.0f;
     float _batt_current_last = 0.0f;
+
+    // coordinate frames
+    Matrix3f            _vehicle_attitude;          // rotation matrix from vehicle's body frame to inertial frame
+    Matrix3f            _control_frame;             // rotation matrix describing the coordinate frame where pilot commands are interpreted in
+
+    // pilot throttle
+    float _pilot_throttle_in = 0.0f;
 };

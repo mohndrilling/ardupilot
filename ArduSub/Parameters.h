@@ -191,6 +191,7 @@ public:
         k_param_throttle_gain,
         k_param_cam_tilt_center, // deprecated
         k_param_frame_configuration,
+        k_param_control_frame, // with regard to which coordinate frame the pilot commands are interpreted to
 
         // Acro Mode parameters
         k_param_acro_yaw_p = 220, // Used in all modes for get_pilot_desired_yaw_rate
@@ -274,6 +275,7 @@ public:
     AP_Float        minGain;
     AP_Int8         numGainSettings;
     AP_Float        throttle_gain;
+    AP_Int8         control_frame;
 
     AP_Int16        lights_steps;
 

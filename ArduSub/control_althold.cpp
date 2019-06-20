@@ -100,9 +100,19 @@ void Sub::althold_run()
     static bool engageStopZ = true;
     // Get last user velocity direction to check for zero derivative points
     static bool lastVelocityZWasNegative = false;
-    if (fabsf(channel_throttle->norm_input()-0.5f) > 0.05f) { // Throttle input above 5%
-        // output pilot's throttle
-        attitude_control.set_throttle_out(channel_throttle->norm_input() + motors.get_throttle_hover() - 0.5f, false, g.throttle_filt);
+
+    //threshold for pilot input commands
+    float inp_threshold = 0.05f;
+
+    if (  fabsf(channel_throttle->norm_input()-0.5f) > inp_threshold
+       || fabsf(channel_forward->norm_input()) > inp_threshold
+       || fabsf(channel_lateral->norm_input()) > inp_threshold) { // Pilot input above 5%
+
+        // disable depth control
+        // the throttle for hovering will be applied along inertial z-axis
+        // all of the remaining pilot inputs will be added up on top of that applied to the axes corresponding to the current control frame
+        // see update_control_frame in motors.cpp and output_armed_stabilizing_vectored_6dof() in Motors6DOF.cpp
+        attitude_control.set_throttle_out(motors.get_throttle_hover(), false, g.throttle_filt);
 
         // reset z targets to current values
         pos_control.relax_alt_hold_controllers();
@@ -131,6 +141,8 @@ void Sub::althold_run()
         pos_control.update_z_controller();
     }
 
+    // output pilot's translational motion commmands
+    motors.set_pilot_throttle(channel_throttle->norm_input() - 0.5f);
     motors.set_forward(channel_forward->norm_input());
     motors.set_lateral(channel_lateral->norm_input());
 }

@@ -54,6 +54,10 @@
 # define NETTRACKING_VEL_DEFAULT 0.1f // Lateral velocity in m/s which the ROV obtains during scanning of fishing net
 #endif
 
+#ifndef CONTROL_FRAME_DEFAULT
+# define CONTROL_FRAME_DEFAULT CF_Body // Coordinate frame with regard to which the pilot commands are interpreted to
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 // PWM control
 // default RC speed in Hz

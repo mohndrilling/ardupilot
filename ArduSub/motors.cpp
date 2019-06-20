@@ -125,6 +125,77 @@ void Sub::init_disarm_motors()
     clear_input_hold();
 }
 
+// update_control_frame - sends the rotation matrix of the current control frame to the motor classes
+// the motor classes transform the thrust factors of each thruster accordingly
+void Sub::update_control_frame()
+{
+    // get current vehicle attitude
+    Quaternion vehicle_attitude;
+    ahrs.get_quat_body_to_ned(vehicle_attitude);
+
+    // the thrust commands from the depth controller are always supposed to be directed along the inertial z-axis
+    // inform the motor classes about the current vehicle attitude, so they can assign the distinct thruster outputs such that throttle along inertial z-axis is achieved.
+    Matrix3f att_to_rot_matrix; // rotation from the target body frame to the inertial frame.
+    vehicle_attitude.rotation_matrix(att_to_rot_matrix);
+    motors.set_vehicle_attitude(att_to_rot_matrix);
+
+    // inform motor classes about current control frame
+    Quaternion control_frame_q;
+    Matrix3f control_frame_mat;
+
+    switch(g.control_frame)
+    {
+        case CF_Inertial:
+            control_frame_q = vehicle_attitude;
+            break;
+
+        case CF_Local:
+            // the local frame is horizontally levelled (as the inertial frame) but rotated around the z-axis corresponding to current vehicles yaw angle
+            // so the projection of the x-axis of the ROV to the inertial xy-plane points to the same direction as the local frame's x-axis
+
+            // get the current vehicle attitude describes as euler angles
+            float current_roll, current_pitch, current_yaw;
+            vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
+
+            // pitching above 90 degrees leads to jump of yaw angle (lateral pilot commands will change direction)
+            // the local control frame feels unintuitive for large roll angles as well.
+            // Therefore we switch to 'body' control frame, if lean angles exceed following maxima
+            if (fabs(degrees(current_roll)) > 45.0f || fabs(degrees(current_pitch)) > 80.0f)
+            {
+                uint32_t tnow = AP_HAL::millis();
+                if (tnow > last_control_frame_fail + 10000) {
+                    gcs().send_text(MAV_SEVERITY_WARNING, "Control frame 'Local': Maximum lean angle exceeded! Switching to control frame 'Body'.");
+                    last_control_frame_fail = tnow;
+                    control_frame_q.from_euler(0.0f, 0.0f, 0.0f);
+                }
+            }
+            else
+            {
+                // rotate the vehicle attitude by -current_yaw back around the z-axis to obtain local control frame
+                Quaternion yaw_compensation_q;
+                yaw_compensation_q.from_euler(0.0f, 0.0f, -current_yaw);
+                control_frame_q = yaw_compensation_q * vehicle_attitude;
+            }
+
+            break;
+
+        case CF_Body:
+            // zero transformation: pilot commands will be statically executed w.r.t. the vehicle's body frame
+            control_frame_q.from_euler(0.0f, 0.0f, 0.0f);
+            break;
+
+        default:
+            // use 'body' control frame as default
+            control_frame_q.from_euler(0.0f, 0.0f, 0.0f);
+            break;
+    }
+
+    // finally inform motor classes about resulting control frame
+    control_frame_q.rotation_matrix(control_frame_mat);
+    motors.set_control_frame(control_frame_mat);
+
+}
+
 // motors_output - send output to motors library which will adjust and send to ESCs and servos
 void Sub::motors_output()
 {

@@ -604,6 +604,7 @@ private:
     void set_bottomed(bool at_bottom);
     bool init_arm_motors(AP_Arming::Method method);
     void init_disarm_motors();
+    void update_control_frame();
     void motors_output();    
     void update_throttle_hover();
     Vector3f pv_location_to_vector(const Location& loc);
@@ -701,6 +702,7 @@ private:
 
     uint32_t last_do_motor_test_fail_ms = 0;
     uint32_t last_do_motor_test_ms = 0;
+    uint32_t last_control_frame_fail = 0;
 
     uint32_t last_stereo_update_ms = 0;
 

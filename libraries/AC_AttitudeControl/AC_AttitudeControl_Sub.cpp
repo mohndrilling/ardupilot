@@ -299,11 +299,6 @@ void AC_AttitudeControl_Sub::rate_controller_run()
     _motors.set_pitch(rate_target_to_motor_pitch(gyro_latest.y, _rate_target_ang_vel.y));
     _motors.set_yaw(rate_target_to_motor_yaw(gyro_latest.z, _rate_target_ang_vel.z));
 
-    // also inform motor classes about current attitude to enable position control w.r.t. the inertial frame
-    Matrix3f att_to_rot_matrix; // rotation from the target body frame to the inertial frame.
-    _attitude_target_quat.rotation_matrix(att_to_rot_matrix);
-    _motors.set_vehicle_attitude(att_to_rot_matrix);
-
     control_monitor_update();
 }
 

@@ -118,18 +118,15 @@ const AP_Param::GroupInfo AP_Motors6DOF::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("12_DIRECTION", 13, AP_Motors6DOF, _motor_reverse[11], 1),
 
-    // @Param: POS_WRT_NED
-    // @DisplayName: Linear movement wrt. ned frame
-    // @Description: Set this parameter to 1 to interprete translational motion w.r.t. the NED-Frame
-    // @Values: 0:Disabled, 1:Enabled
-    // @User: Standard
-    AP_GROUPINFO("POS_WRT_NED", 14, AP_Motors6DOF, _move_wrt_ned, 0),
-
     AP_GROUPEND
 };
 
 void AP_Motors6DOF::setup_motors(motor_frame_class frame_class, motor_frame_type frame_type)
 {
+    // initialize vehicle attitude and control frame
+    _vehicle_attitude.from_euler(0.0f, 0.0f, 0.0f);
+    _control_frame.from_euler(0.0f, 0.0f, 0.0f);
+
     // remove existing motors
     for (int8_t i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
         remove_motor(i);
@@ -167,7 +164,7 @@ void AP_Motors6DOF::setup_motors(motor_frame_class frame_class, motor_frame_type
         add_motor_raw_6dof(AP_MOTORS_MOT_6,    -1.0f,          -1.0f,           0,              1.0f,              0,                  0,              6);
         add_motor_raw_6dof(AP_MOTORS_MOT_7,     1.0f,           1.0f,           0,              1.0f,              0,                  0,              7);
         add_motor_raw_6dof(AP_MOTORS_MOT_8,    -1.0f,           1.0f,           0,              1.0f,              0,                  0,              8);
-        break;            
+        break;
 
     case SUB_FRAME_VECTORED:
         add_motor_raw_6dof(AP_MOTORS_MOT_1,     0,              0,              1.0f,           0,                  -1.0f,              1.0f,           1);
@@ -365,7 +362,7 @@ void AP_Motors6DOF::output_armed_stabilizing()
 
     const AP_BattMonitor &battery = AP::battery();
 
-	// Current limiting
+    // Current limiting
     if (_batt_current_max <= 0.0f || !battery.has_current()) {
         return;
     }
@@ -531,51 +528,43 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
     // positive throttle should result in a lift up of the rov along the negative z-axis. Therefore invert the throttle thrust
     throttle_thrust = - throttle_thrust;
 
+    rpt_max = 1; //Initialized to 1 so that normalization will only occur if value is saturated
+    yfl_max = 1; //Initialized to 1 so that normalization will only occur if value is saturated
     // calculate each motor's contribution to linear movement
     for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
-        if (motor_enabled[i]) {            
-            // thrust factors with regard to the ned frame
+        if (motor_enabled[i]) {
+            // calculate thrust factors with regard to the inertial NED Frame
             Vector3f thrust_vector_B = Vector3f(_forward_factor[i], _lateral_factor[i], _throttle_factor[i]);
             Vector3f thrust_vector_I = _vehicle_attitude * thrust_vector_B;
-            if (_move_wrt_ned) {
-                _inertial_forward_factor[i] = thrust_vector_I[0];
-                _inertial_lateral_factor[i] = thrust_vector_I[1];
-            }
-            else {
-                // thrust factors with regard to the body frame
-                _inertial_forward_factor[i] = _forward_factor[i];
-                _inertial_lateral_factor[i] = _lateral_factor[i];
-            }
-            // throttle is always interpreted w.r.t. ned frame
+
+            // this is, how much each thruster contributes along inertial z-direction. The throttle_thrust (from depth control) is pointed to that direction
             _inertial_throttle_factor[i] = thrust_vector_I[2];
 
-        }
-    }
+            // Convert thrust vector from body to control frame
+            Vector3f thrust_vector_C = _control_frame * thrust_vector_B;
 
-    // calculate roll, pitch and linear contribution for each motor (only used by vertical thrusters)
-    rpt_max = 1; //Initialized to 1 so that normalization will only occur if value is saturated
-    for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
-        if (motor_enabled[i]) {
+            _cf_forward_factor[i] = thrust_vector_C[0];
+            _cf_lateral_factor[i] = thrust_vector_C[1];
+            _cf_throttle_factor[i] = thrust_vector_C[2];
+
+            // calculate roll, pitch and linear contribution for each motor
             rpt_out[i] = roll_thrust * _roll_factor[i] +
                          pitch_thrust * _pitch_factor[i] +
-                         forward_thrust * _inertial_forward_factor[i] +
-                         lateral_thrust * _inertial_lateral_factor[i] +
-                         throttle_thrust * _inertial_throttle_factor[i];
+                         forward_thrust * _cf_forward_factor[i] +
+                         lateral_thrust * _cf_lateral_factor[i] +
+                         throttle_thrust * _inertial_throttle_factor[i] +
+                         _pilot_throttle_in * _cf_throttle_factor[i];
             if (fabsf(rpt_out[i]) > rpt_max) {
                 rpt_max = fabsf(rpt_out[i]);
             }
-        }
-    }
 
-    // calculate linear/yaw command for each motor (only used for translational thrusters)
-    // linear factors should be 0.0 or 1.0 for now
-    yfl_max = 1; //Initialized to 1 so that normalization will only occur if value is saturated
-    for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
-        if (motor_enabled[i]) {
+
+            // calculate yaw and linear contribution for each motor
             yfl_out[i] = yaw_thrust * _yaw_factor[i] +
-                         forward_thrust * _inertial_forward_factor[i] +
-                         lateral_thrust * _inertial_lateral_factor[i] +
-                         throttle_thrust * _inertial_throttle_factor[i];
+                         forward_thrust * _cf_forward_factor[i] +
+                         lateral_thrust * _cf_lateral_factor[i] +
+                         throttle_thrust * _inertial_throttle_factor[i] +
+                         _pilot_throttle_in * _cf_throttle_factor[i];
             if (fabsf(yfl_out[i]) > yfl_max) {
                 yfl_max = fabsf(yfl_out[i]);
             }

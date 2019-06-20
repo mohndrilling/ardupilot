@@ -118,6 +118,16 @@ enum LoggingParameters {
     LOG_GUIDEDTARGET_MSG
 };
 
+// Control frames: how pilot commands for translational movement are interpreted
+// CF_Inertial: move along axes of inertial north-east-down-frame
+// CF_Local: move along axes of yaw rotated inertial frame (following vehicle's yaw angle)
+// CF_Body: move along vehicles body axes
+enum ControlFrames {
+    CF_Inertial,
+    CF_Local,
+    CF_Body
+};
+
 #define MASK_LOG_ATTITUDE_FAST          (1<<0)
 #define MASK_LOG_ATTITUDE_MED           (1<<1)
 #define MASK_LOG_GPS                    (1<<2)

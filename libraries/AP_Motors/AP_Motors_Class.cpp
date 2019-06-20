@@ -51,9 +51,6 @@ AP_Motors::AP_Motors(uint16_t loop_rate, uint16_t speed_hz) :
     limit.throttle_upper = true;
     _thrust_boost = false;
     _thrust_balanced = true;
-
-    // set vehicles attitude to zero
-    _vehicle_attitude.from_euler(0, 0, 0);
 };
 
 void AP_Motors::armed(bool arm)

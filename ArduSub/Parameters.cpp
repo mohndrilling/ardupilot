@@ -53,6 +53,13 @@ const AP_Param::Info Sub::var_info[] = {
     // @User: Standard
     GSCALAR(nettracking_velocity, "NETTRACKING_VEL", NETTRACKING_VEL_DEFAULT),
 
+    // @Param: CONTROL_FRAME
+    // @DisplayName: Control frame where pilot commands are interpreted in
+    // @Description:  Control coordinate frame where pilot commands are interpreted in
+    // @Values: 0:Inertial, 1:Local, 2:Body
+    // @User: Standard
+    GSCALAR(control_frame, "CONTROL_FRAME", CONTROL_FRAME_DEFAULT),
+
     // @Param: SYSID_SW_MREV
     // @DisplayName: Eeprom format version number
     // @Description: This value is incremented when changes are made to the eeprom format
