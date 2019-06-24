@@ -25,12 +25,13 @@ AP_StereoVision_Backend::AP_StereoVision_Backend(AP_StereoVision &frontend) :
 }
 
 // set deltas (used by backend to update state)
-void AP_StereoVision_Backend::set_stereovision_odometry(const Vector3f &lin_velocity, float distance, float delta_pitch, float delta_yaw, uint64_t time_delta_usec, float confidence)
+void AP_StereoVision_Backend::set_stereovision_odometry(const Vector3f &lin_velocity, float distance, float delta_pitch, float delta_yaw, uint32_t mesh_count, uint64_t time_delta_usec, float confidence)
 {
     _frontend._state.lin_velocity = lin_velocity;
     _frontend._state.distance = distance;
     _frontend._state.delta_pitch = RadiansToCentiDegrees(delta_pitch);
     _frontend._state.delta_yaw = RadiansToCentiDegrees(delta_yaw);
+    _frontend._state.mesh_count = mesh_count;
     _frontend._state.time_delta_usec = time_delta_usec;
     _frontend._state.confidence = confidence;
     _frontend._state.last_sensor_update_ms = AP_HAL::millis();

@@ -48,6 +48,7 @@ public:
         float distance;    // distance to nearest poincloud in front
         float delta_pitch; // difference pitch angle (centi-degrees) between the vehicle's heading and the targeted object plane
         float delta_yaw; // difference yaw angle (centi-degrees) between the vehicle's heading and the targeted object plane
+        uint32_t mesh_count; // amount of currently visible net meshes
         uint64_t time_delta_usec;   // time delta (in usec) between previous and most recent update
         float confidence;           // confidence expressed as a value from 0 (no confidence) to 100 (very confident)
         uint32_t last_sensor_update_ms;    // system time (in milliseconds) of last update from sensor
@@ -81,9 +82,10 @@ public:
     const float &get_distance() const { return _state.distance; }
     const float &get_delta_pitch() const { return _state.delta_pitch; }
     const float &get_delta_yaw() const { return _state.delta_yaw; }
-    uint64_t get_time_delta_usec() const { return _state.time_delta_usec; }
-    float get_confidence() const { return _state.confidence; }
-    uint32_t get_last_update_ms() const { return _state.last_sensor_update_ms; }
+    const uint32_t &get_mesh_count() const { return _state.mesh_count; }
+    const uint64_t &get_time_delta_usec() const { return _state.time_delta_usec; }
+    const float &get_confidence() const { return _state.confidence; }
+    const uint32_t &get_last_update_ms() const { return _state.last_sensor_update_ms; }
 
 private:
 
