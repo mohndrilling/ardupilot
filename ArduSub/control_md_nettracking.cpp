@@ -163,13 +163,6 @@ void Sub::md_net_tracking_run()
 // net tracking logic
 void Sub::perform_net_tracking(float &forward_out, float &lateral_out)
 {
-    // retrieve current distance from stereovision module
-    float cur_dist = stereovision.get_distance();
-
-    // desired distance (m)
-    float d_dist = float(g.nettracking_distance) / 100.0f;
-    float dist_error = cur_dist - d_dist;
-
     // time difference (in seconds) between two measurements from stereo vision is used to lowpass filter the data
     float dt = stereovision.get_time_delta_usec() / 1000000.0f;
 
@@ -181,12 +174,47 @@ void Sub::perform_net_tracking(float &forward_out, float &lateral_out)
     // only update target distance and attitude, if new measurement from stereo data available
     bool update_target = stereovision.get_last_update_ms() - last_stereo_update_ms != 0;
 
-    // get forward command from distance controller
     last_stereo_update_ms = stereovision.get_last_update_ms();
-    pos_control.update_dist_controller(forward_out, dist_error, dt, update_target);
+
+    // whether to perform vision based attitude control
+    bool att_ctrl;
+
+    if (g.nettracking_mesh_ctrl)
+    {
+        // retrieve amount of currently visible net meshes
+        float cur_mesh_cnt = stereovision.get_mesh_count();
+
+
+        // desired mesh count (control the square root of current mesh count, since total meshcount grows quadratically over the distance to the net)
+        // but we want a linear dependency between control input (forward throttle) and control variable (square rooted mesh count)
+        float d_mesh_cnt = g.nettracking_mesh_cnt;
+        float mesh_cnt_error = sqrt(cur_mesh_cnt) - d_mesh_cnt;
+
+        // get forward command from mesh count controller
+        pos_control.update_mesh_cnt_controller(forward_out, mesh_cnt_error, dt, update_target);
+
+        att_ctrl = abs(mesh_cnt_error) < 3.0f;
+
+    }
+    else
+    {
+        // retrieve current distance from stereovision module
+        float cur_dist = stereovision.get_distance();
+
+        // desired distance (m)
+        float d_dist = float(g.nettracking_distance) / 100.0f;
+        float dist_error = cur_dist - d_dist;
+
+        // get forward command from distance controller
+        pos_control.update_dist_controller(forward_out, dist_error, dt, update_target);
+
+        att_ctrl = abs(dist_error) < 0.3f;
+    }
+
+
 
     // if distance error is small enough, use the stereovision heading data to always orientate the vehicle normal to the faced object surface
-    if (abs(dist_error) < 0.3)
+    if (att_ctrl)
     {
         // no roll desired
         float target_roll = 0.0f;
