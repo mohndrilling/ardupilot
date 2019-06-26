@@ -53,6 +53,21 @@ const AP_Param::Info Sub::var_info[] = {
     // @User: Standard
     GSCALAR(nettracking_velocity, "NETTRACKING_VEL", NETTRACKING_VEL_DEFAULT),
 
+    // @Param: NETTR_MESH_CTRL
+    // @DisplayName: Control the amount of visible net meshes
+    // @Description: Control the amount of visible net meshes
+    // @Values: 0:Disables, 1:Enabled
+    // @User: Standard
+    GSCALAR(nettracking_mesh_ctrl, "NETTR_MESH_CTRL", NETTR_MESH_CTRL_DEFAULT),
+
+    // @Param: NETTR_MESH_CNT
+    // @DisplayName: Square root of desired amount of visble net meshes
+    // @Description: The square root of desired reference amount of visble net meshes during net tracking
+    // @Units:
+    // @Range: 10 100
+    // @User: Standard
+    GSCALAR(nettracking_mesh_cnt, "NETTR_MESH_CNT", NETTR_MESH_CNT_DEFAULT),
+
     // @Param: CONTROL_FRAME
     // @DisplayName: Control frame where pilot commands are interpreted in
     // @Description:  Control coordinate frame where pilot commands are interpreted in

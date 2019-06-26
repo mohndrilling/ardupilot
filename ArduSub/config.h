@@ -54,6 +54,14 @@
 # define NETTRACKING_VEL_DEFAULT 0.1f // Lateral velocity in m/s which the ROV obtains during scanning of fishing net
 #endif
 
+#ifndef NETTR_MESH_CTRL_DEFAULT
+# define NETTR_MESH_CTRL_DEFAULT 0 // Control the amount of visible net meshes
+#endif
+
+#ifndef NETTR_MESH_CNT_DEFAULT
+# define NETTR_MESH_CNT_DEFAULT 20 // The square root of desired reference amount of visble net meshes during net tracking
+#endif
+
 #ifndef CONTROL_FRAME_DEFAULT
 # define CONTROL_FRAME_DEFAULT CF_Body // Coordinate frame with regard to which the pilot commands are interpreted to
 #endif

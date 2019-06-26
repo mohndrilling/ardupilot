@@ -11,6 +11,15 @@
 # define POSCONTROL_DIST_DT                   0.01f   // distance controller dt default
 # define POSCONTROL_DIST_PMAX                 0.15f   // distance controller PMAX gain default
 
+// mesh count controller default definitions
+# define POSCONTROL_MESH_CNT_P                    0.02f    // distance controller P gain default
+# define POSCONTROL_MESH_CNT_I                    0.5f    // distance controller I gain default
+# define POSCONTROL_MESH_CNT_D                    0.0f    // distance controller D gain default
+# define POSCONTROL_MESH_CNT_IMAX                 0.001f     // distance controller IMAX gain default
+# define POSCONTROL_MESH_CNT_FILT_HZ              10.0f   // distance controller input filter default
+# define POSCONTROL_MESH_CNT_DT                   0.01f   // distance controller dt default
+# define POSCONTROL_MESH_CNT_PMAX                 0.08f   // distance controller PMAX gain default
+
 class AC_PosControl_Sub : public AC_PosControl {
 public:
     AC_PosControl_Sub(const AP_AHRS_View & ahrs, const AP_InertialNav& inav,
@@ -52,6 +61,9 @@ public:
     /// control distance to net
     void update_dist_controller(float& target_forward, float distance_error, float dt, bool update);
 
+    /// control currently visible net meshes
+    void update_mesh_cnt_controller(float& target_forward, float mesh_cnt_error, float dt, bool update);
+
 private:
     float       _alt_max; // max altitude - should be updated from the main code with altitude limit from fence
     float       _alt_min; // min altitude - should be updated from the main code with altitude limit from fence
@@ -59,6 +71,8 @@ private:
     float       _net_track_dist; // desired distance of vehicle to tracked net in meters
 
     AC_PID      _pid_dist; // distance controller
+
+    AC_PID      _pid_mesh_cnt; // mesh_cnt controller
 
 
 };

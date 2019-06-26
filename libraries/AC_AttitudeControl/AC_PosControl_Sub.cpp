@@ -6,7 +6,8 @@ AC_PosControl_Sub::AC_PosControl_Sub(const AP_AHRS_View& ahrs, const AP_Inertial
     AC_PosControl(ahrs, inav, motors, attitude_control),
     _alt_max(0.0f),
     _alt_min(0.0f),
-    _pid_dist(POSCONTROL_DIST_P, POSCONTROL_DIST_I, POSCONTROL_DIST_D, POSCONTROL_DIST_IMAX, POSCONTROL_DIST_FILT_HZ, POSCONTROL_DIST_DT)
+    _pid_dist(POSCONTROL_DIST_P, POSCONTROL_DIST_I, POSCONTROL_DIST_D, POSCONTROL_DIST_IMAX, POSCONTROL_DIST_FILT_HZ, POSCONTROL_DIST_DT),
+    _pid_mesh_cnt(POSCONTROL_MESH_CNT_P, POSCONTROL_MESH_CNT_I, POSCONTROL_MESH_CNT_D, POSCONTROL_MESH_CNT_IMAX, POSCONTROL_MESH_CNT_FILT_HZ, POSCONTROL_MESH_CNT_DT)
 {}
 
 /// set_alt_target_from_climb_rate - adjusts target up or down using a climb rate in cm/s
@@ -129,6 +130,32 @@ void AC_PosControl_Sub::update_dist_controller(float& target_forward, float dist
 
     // get d term
     d = _pid_dist.get_d();
+
+    target_forward = p + i + d;
+}
+
+void AC_PosControl_Sub::update_mesh_cnt_controller(float& target_forward, float mesh_cnt_error, float dt, bool update)
+{
+    // simple pid controller for distance control
+    // todo: check if useful to use implemented xy-position controller
+    float p, i, d;
+
+    if (update)
+    {
+        _pid_mesh_cnt.set_dt(dt);
+        _pid_mesh_cnt.set_input_filter_all(mesh_cnt_error);
+    }
+
+    // separately calculate p, i, d values for logging
+    // probably better to use square root constrain
+    p = _pid_mesh_cnt.get_p();
+    p = constrain_float(p, -POSCONTROL_MESH_CNT_PMAX, POSCONTROL_MESH_CNT_PMAX);
+
+    // get i term
+    i = _pid_mesh_cnt.get_i();
+
+    // get d term
+    d = _pid_mesh_cnt.get_d();
 
     target_forward = p + i + d;
 }
