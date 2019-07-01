@@ -51,7 +51,7 @@
 #endif
 
 #ifndef NETTRACKING_VEL_DEFAULT
-# define NETTRACKING_VEL_DEFAULT 0.1f // Lateral velocity in m/s which the ROV obtains during scanning of fishing net
+# define NETTRACKING_VEL_DEFAULT 10 // Lateral velocity in cm/s which the ROV obtains during scanning of fishing net
 #endif
 
 #ifndef NETTR_MESH_CTRL_DEFAULT

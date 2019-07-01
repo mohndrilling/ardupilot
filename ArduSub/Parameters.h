@@ -312,7 +312,7 @@ public:
 
     // Net tracking parameters
     AP_Int16 nettracking_distance;
-    AP_Float nettracking_velocity;
+    AP_Int16 nettracking_velocity;
     AP_Int8 nettracking_mesh_ctrl;
     AP_Int32 nettracking_mesh_cnt;
 

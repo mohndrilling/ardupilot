@@ -224,7 +224,7 @@ void Sub::perform_net_tracking(float &forward_out, float &lateral_out)
         float target_yaw_error = stereovision.get_delta_yaw();
 
         // assume concave net shape -> only allow increasing/decreasing of yaw error w.r.t. the direction of movement
-        float scan_dir = is_negative(g.nettracking_velocity) ? -1.0f : 1.0f;
+        float scan_dir = is_negative(float(g.nettracking_velocity)) ? -1.0f : 1.0f;
         target_yaw_error = scan_dir * target_yaw_error < 0 ? target_yaw_error : 0;
 
         // only change pitch when changing altitude
@@ -235,7 +235,7 @@ void Sub::perform_net_tracking(float &forward_out, float &lateral_out)
         attitude_control.input_euler_roll_pitch_yaw_accumulate(target_roll, target_pitch_error, target_yaw_error, dt, update_target);
 
         // set commands for lateral motion
-        lateral_out = g.nettracking_velocity;
+        lateral_out = g.nettracking_velocity / 100.0f;
     }
     else
     {

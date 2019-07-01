@@ -48,8 +48,8 @@ const AP_Param::Info Sub::var_info[] = {
     // @Param: NETTRACKING_VEL
     // @DisplayName: Lateral velocity during scan of fish net
     // @Description: Lateral velocity of the vehicle during scan of fish net
-    // @Units: m/s
-    // @Range: 0 0.2
+    // @Units: cm/s
+    // @Range: -100 100
     // @User: Standard
     GSCALAR(nettracking_velocity, "NETTRACKING_VEL", NETTRACKING_VEL_DEFAULT),
 
