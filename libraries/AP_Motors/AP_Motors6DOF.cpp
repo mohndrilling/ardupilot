@@ -20,8 +20,13 @@
 #include <AP_BattMonitor/AP_BattMonitor.h>
 #include <AP_HAL/AP_HAL.h>
 #include "AP_Motors6DOF.h"
+#include <GCS_MAVLink/GCS.h>
 
 extern const AP_HAL::HAL& hal;
+
+static uint8_t debug_counter = 0;
+static int debug_freq = 20;
+static int debug_cnt_limit = int(400 / float(debug_freq));
 
 // parameters for the motor class
 const AP_Param::GroupInfo AP_Motors6DOF::var_info[] = {
@@ -575,6 +580,15 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
     for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
         if (motor_enabled[i]) {
             _thrust_rpyt_out[i] = constrain_float(_motor_reverse[i]*(rpt_out[i]/rpt_max + yfl_out[i]/yfl_max),-1.0f,1.0f);
+            if (debug_counter > debug_cnt_limit)
+            {
+                // including of <string> or similar leads to compiling error for cubeblack -> do manual int-to-char-conversion instead
+                char mot_id_char = char(i + uint8_t(48));
+                char debug_field_name[] = {'m', 'o', 't', 'o', 'r', mot_id_char, '\000'};
+                char * debug_field_name_str = &(debug_field_name[0]);
+                gcs().send_named_float(debug_field_name_str, _thrust_rpyt_out[i]);
+            }
         }
     }
+    debug_counter = debug_counter > debug_cnt_limit ? 0 : debug_counter + 1;
 }
