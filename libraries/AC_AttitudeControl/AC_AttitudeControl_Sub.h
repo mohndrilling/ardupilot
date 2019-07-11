@@ -91,4 +91,6 @@ protected:
     float _target_roll_cd;
     float _target_pitch_cd;
     float _target_yaw_cd;
+
+    bool _last_yaw_err_negative;
 };

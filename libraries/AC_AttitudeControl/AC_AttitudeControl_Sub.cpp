@@ -171,7 +171,8 @@ AC_AttitudeControl_Sub::AC_AttitudeControl_Sub(AP_AHRS_View &ahrs, const AP_Vehi
     _motors_multi(motors),
     _pid_rate_roll(AC_ATC_SUB_RATE_RP_P, AC_ATC_SUB_RATE_RP_I, AC_ATC_SUB_RATE_RP_D, AC_ATC_SUB_RATE_RP_IMAX, AC_ATC_SUB_RATE_RP_FILT_HZ, dt),
     _pid_rate_pitch(AC_ATC_SUB_RATE_RP_P, AC_ATC_SUB_RATE_RP_I, AC_ATC_SUB_RATE_RP_D, AC_ATC_SUB_RATE_RP_IMAX, AC_ATC_SUB_RATE_RP_FILT_HZ, dt),
-    _pid_rate_yaw(AC_ATC_SUB_RATE_YAW_P, AC_ATC_SUB_RATE_YAW_I, AC_ATC_SUB_RATE_YAW_D, AC_ATC_SUB_RATE_YAW_IMAX, AC_ATC_SUB_RATE_YAW_FILT_HZ, dt)
+    _pid_rate_yaw(AC_ATC_SUB_RATE_YAW_P, AC_ATC_SUB_RATE_YAW_I, AC_ATC_SUB_RATE_YAW_D, AC_ATC_SUB_RATE_YAW_IMAX, AC_ATC_SUB_RATE_YAW_FILT_HZ, dt),
+    _last_yaw_err_negative(false)
 {
     AP_Param::setup_object_defaults(this, var_info);
 
@@ -214,6 +215,10 @@ void AC_AttitudeControl_Sub::input_euler_roll_pitch_yaw_accumulate(float euler_r
 
         // update cut off frequency
         _yaw_error_filter.set_cutoff_frequency(_yaw_filter_cut_off);
+
+        if (_last_yaw_err_negative != (euler_yaw_offs_cd < 0))
+            _yaw_error_filter.reset();
+        _last_yaw_err_negative = euler_yaw_offs_cd < 0;
 
         // get lowpass filtered pitch and yaw errors
         float pitch_error = _pitch_error_filter.apply(euler_pitch_angle_offs_cd, dt);
