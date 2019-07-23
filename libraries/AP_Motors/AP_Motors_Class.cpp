@@ -34,15 +34,24 @@ AP_Motors::AP_Motors(uint16_t loop_rate, uint16_t speed_hz) :
     _loop_rate(loop_rate),
     _speed_hz(speed_hz),
     _throttle_filter(),
+    _forward_filter(),
+    _lateral_filter(),
     _spool_desired(DesiredSpoolState::SHUT_DOWN),
     _spool_state(SpoolState::SHUT_DOWN),
     _air_density_ratio(1.0f)
 {
     _singleton = this;
 
-    // setup throttle filtering
+    // setup input filtering
     _throttle_filter.set_cutoff_frequency(0.0f);
     _throttle_filter.reset(0.0f);
+
+    _forward_filter.set_cutoff_frequency(0.0f);
+    _forward_filter.reset(0.0f);
+
+    _lateral_filter.set_cutoff_frequency(0.0f);
+    _lateral_filter.reset(0.0f);
+
 
     // init limit flags
     limit.roll_pitch = true;

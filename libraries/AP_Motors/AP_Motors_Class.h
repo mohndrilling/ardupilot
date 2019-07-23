@@ -87,7 +87,9 @@ public:
     void                set_throttle_avg_max(float throttle_avg_max) { _throttle_avg_max = constrain_float(throttle_avg_max,0.0f,1.0f); };   // range 0 ~ 1
     void                set_throttle_filter_cutoff(float filt_hz) { _throttle_filter.set_cutoff_frequency(filt_hz); }
     void                set_forward(float forward_in) { _forward_in = forward_in; }; // range -1 ~ +1
+    void                set_forward_filter_cutoff(float filt_hz) { _forward_filter.set_cutoff_frequency(filt_hz); }
     void                set_lateral(float lateral_in) { _lateral_in = lateral_in; };     // range -1 ~ +1
+    void                set_lateral_filter_cutoff(float filt_hz) { _lateral_filter.set_cutoff_frequency(filt_hz); }
 
     // accessors for roll, pitch, yaw and throttle inputs to motors
     float               get_roll() const { return _roll_in; }
@@ -95,8 +97,8 @@ public:
     float               get_yaw() const { return _yaw_in; }
     float               get_throttle() const { return constrain_float(_throttle_filter.get(),0.0f,1.0f); }
     float               get_throttle_bidirectional() const { return constrain_float(2*(_throttle_filter.get()-0.5f),-1.0f,1.0f); }
-    float               get_forward() const { return _forward_in; }
-    float               get_lateral() const { return _lateral_in; }
+    float               get_forward() const { return constrain_float(_forward_filter.get(),-0.5f,0.5f); }
+    float               get_lateral() const { return constrain_float(_lateral_filter.get(),-0.5f,0.5f); }
     virtual float       get_throttle_hover() const = 0;
 
     // motor failure handling
@@ -221,6 +223,8 @@ protected:
     float               _lateral_in;                // last lateral input from set_lateral caller
     float               _throttle_avg_max;          // last throttle input from set_throttle_avg_max
     LowPassFilterFloat  _throttle_filter;           // throttle input filter
+    LowPassFilterFloat  _forward_filter;            // forward input filter
+    LowPassFilterFloat  _lateral_filter;            // lateral input filter
     DesiredSpoolState   _spool_desired;             // desired spool state
     SpoolState          _spool_state;               // current spool mode
 

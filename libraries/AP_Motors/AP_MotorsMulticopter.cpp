@@ -203,6 +203,24 @@ const AP_Param::GroupInfo AP_MotorsMulticopter::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("SLEW_DN_TIME",   41, AP_MotorsMulticopter,  _slew_dn_time, AP_MOTORS_SLEW_TIME_DEFAULT),
 
+    // @Param: FORW_FILT_HZ
+    // @DisplayName: Cut off frequency for forward input
+    // @Description: All the forward commands to the motor classes will be low pass filtered with the given cut off frequency
+    // @Range: 0 4.0
+    // @Units: Hz
+    // @Increment: 0.001
+    // @User: Advanced
+    AP_GROUPINFO("FORW_FILT_HZ",   42, AP_MotorsMulticopter,  _forw_cutoff_freq, AP_MOTORS_FORW_CUTOFF_FILT_HZ),
+
+    // @Param: LAT_FILT_HZ
+    // @DisplayName: Cut off frequency for lateral input
+    // @Description: All the lateral commands to the motor classes will be low pass filtered with the given cut off frequency
+    // @Range: 0 4.0
+    // @Units: Hz
+    // @Increment: 0.001
+    // @User: Advanced
+    AP_GROUPINFO("LAT_FILT_HZ",   43, AP_MotorsMulticopter,  _lat_cutoff_freq, AP_MOTORS_LAT_CUTOFF_FILT_HZ),
+
     AP_GROUPEND
 };
 
@@ -228,6 +246,9 @@ void AP_MotorsMulticopter::output()
 {
     // update throttle filter
     update_throttle_filter();
+
+    // update lateral and forward filter
+    update_transl_filter();
 
     // calc filtered battery voltage and lift_max
     update_lift_max_from_batt_voltage();
@@ -270,6 +291,7 @@ void AP_MotorsMulticopter::output_min()
 void AP_MotorsMulticopter::update_throttle_filter()
 {
     if (armed()) {
+        // throttle
         _throttle_filter.apply(_throttle_in, 1.0f/_loop_rate);
         // constrain filtered throttle
         if (_throttle_filter.get() < 0.0f) {
@@ -278,8 +300,43 @@ void AP_MotorsMulticopter::update_throttle_filter()
         if (_throttle_filter.get() > 1.0f) {
             _throttle_filter.reset(1.0f);
         }
+
     } else {
         _throttle_filter.reset(0.0f);
+    }
+}
+
+// update the throttle input filter
+void AP_MotorsMulticopter::update_transl_filter()
+{
+    // update the cutoff frequencies. Only for lateral and forward filter, since the throttle filter's cut off frequency gets updated by attitude control classes
+    set_forward_filter_cutoff(_forw_cutoff_freq);
+    set_lateral_filter_cutoff(_lat_cutoff_freq);
+
+    if (armed()) {
+
+        // forward
+        _forward_filter.apply(_forward_in, 1.0f/_loop_rate);
+        // constrain filtered forward
+        if (_forward_filter.get() < -0.5f) {
+            _forward_filter.reset(-0.5f);
+        }
+        if (_forward_filter.get() > 0.5f) {
+            _forward_filter.reset(0.5f);
+        }
+
+        //lateral
+        _lateral_filter.apply(_lateral_in, 1.0f/_loop_rate);
+        // constrain filtered lateral
+        if (_lateral_filter.get() < -0.5f) {
+            _lateral_filter.reset(-0.5f);
+        }
+        if (_lateral_filter.get() > 0.5f) {
+            _lateral_filter.reset(0.5f);
+        }
+    } else {
+        _forward_filter.reset(0.0f);
+        _lateral_filter.reset(0.0f);
     }
 }
 

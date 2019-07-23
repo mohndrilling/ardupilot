@@ -505,8 +505,8 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
     pitch_thrust = _pitch_in;
     yaw_thrust = _yaw_in;
     throttle_thrust = get_throttle_bidirectional();
-    forward_thrust = _forward_in;
-    lateral_thrust = _lateral_in;
+    forward_thrust = get_forward();
+    lateral_thrust = get_lateral();
 
     float rpt_out[AP_MOTORS_MAX_NUM_MOTORS]; // buffer so we don't have to multiply coefficients multiple times.
     float yfl_out[AP_MOTORS_MAX_NUM_MOTORS]; // 3 linear DOF mix for each motor

@@ -23,6 +23,9 @@
 #define AP_MOTORS_BAT_CURR_TC_DEFAULT   5.0f    // Time constant used to limit the maximum current
 #define AP_MOTORS_BATT_VOLT_FILT_HZ     0.5f    // battery voltage filtered at 0.5hz
 #define AP_MOTORS_SLEW_TIME_DEFAULT     0.0f    // slew rate limit for thrust output
+#define AP_MOTORS_FORW_CUTOFF_FILT_HZ   2.0f    // cut off frequency for forward output
+#define AP_MOTORS_LAT_CUTOFF_FILT_HZ    2.0f    // cut off frequency for lateral output
+
 
 // spool definition
 #define AP_MOTORS_SPOOL_UP_TIME_DEFAULT 0.5f    // time (in seconds) for throttle to increase from zero to min throttle, and min throttle to full throttle.
@@ -103,6 +106,9 @@ protected:
     // update the throttle input filter
     virtual void        update_throttle_filter() override;
 
+    // update the lateral and forward input filter
+    void        update_transl_filter();
+
     // return current_limit as a number from 0 ~ 1 in the range throttle_min to throttle_max
     virtual float       get_current_limit_max_throttle();
 
@@ -170,6 +176,10 @@ protected:
 
     // scaling for booster motor throttle
     AP_Float            _boost_scale;
+
+    // cut off frequencies for forward and lateral output
+    AP_Float            _forw_cutoff_freq;
+    AP_Float            _lat_cutoff_freq;
 
     // motor output variables
     bool                motor_enabled[AP_MOTORS_MAX_NUM_MOTORS];    // true if motor is enabled
