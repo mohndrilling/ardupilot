@@ -22,6 +22,7 @@ def build(bld):
             'AP_RCMapper',
             'AP_OSD',
             'AP_StereoVision',
+            'AP_NetTracking',
         ],
     )
 
