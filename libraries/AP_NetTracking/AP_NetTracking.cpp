@@ -133,14 +133,19 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
         // update net tracking velocity
         net_track_vel = _tracking_velocity;
 
-        float mesh_distr = _stereo_vision.get_mesh_distr();
-        nettr_toggle_velocity = nettr_toggle_velocity || fabs(mesh_distr - 0.5f) < 0.1f;
-        float distr_thr = 0.15f;
-        bool net_edge_reached = mesh_distr < distr_thr || mesh_distr > (1.0f - distr_thr);
-        if (nettr_toggle_velocity && net_edge_reached)
+        // if the net shape equals an open plane, perform net edge detection based on the mesh distribution on the current image
+        // if net edge detected, reverse the lateral output velocity
+        if (_net_shape == NetShape::Plane)
         {
-            nettr_direction *= -1.0f;
-            nettr_toggle_velocity = false;
+            float mesh_distr = _stereo_vision.get_mesh_distr();
+            nettr_toggle_velocity = nettr_toggle_velocity || fabs(mesh_distr - 0.5f) < 0.1f;
+            float distr_thr = 0.15f;
+            bool net_edge_reached = mesh_distr < distr_thr || mesh_distr > (1.0f - distr_thr);
+            if (nettr_toggle_velocity && net_edge_reached)
+            {
+                nettr_direction *= -1.0f;
+                nettr_toggle_velocity = false;
+            }
         }
 
         lateral_out = nettr_direction * net_track_vel / 1000.0f;
