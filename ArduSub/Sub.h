@@ -94,6 +94,7 @@
 
 #if STEREOVISION == ENABLED
 #include <AP_StereoVision/AP_StereoVision.h>     // Stereo Vision library
+#include <AP_NetTracking/AP_NetTracking.h>       // Net tracking library
 #endif
 
 #if RCMAP_ENABLED == ENABLED
@@ -217,6 +218,7 @@ private:
     // Optical flow sensor
 #if STEREOVISION == ENABLED
     AP_StereoVision stereovision;
+    AP_NetTracking nettracking;
 #endif
     // system time in milliseconds of last recorded yaw reset from ekf
     uint32_t ekfYawReset_ms = 0;
@@ -629,7 +631,6 @@ private:
 #if STEREOVISION == ENABLED
     void init_stereovision();
 #endif
-    void perform_net_tracking(float &forward_out, float &lateral_out);
     void terrain_update();
     void terrain_logging();
     bool terrain_use();
@@ -703,11 +704,6 @@ private:
     uint32_t last_do_motor_test_fail_ms = 0;
     uint32_t last_do_motor_test_ms = 0;
     uint32_t last_control_frame_fail = 0;
-
-    uint32_t last_stereo_update_ms = 0;
-    float net_track_vel;
-    bool nettr_toggle_velocity = false;
-    float nettr_direction = 1.0f;
 
     bool control_check_barometer();
 

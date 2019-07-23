@@ -21,10 +21,8 @@ bool Sub::md_net_tracking_init()
     // set control frame to 'body'
     g.control_frame = CF_Body;
 
-    // set initial net tracking velocity
-    net_track_vel = g.nettracking_velocity;
-
-//    attitude_control.reset_target_attitude();
+    // set attitude target to current attitude
+    attitude_control.reset_target_attitude();
 
     return true;
 }
@@ -36,9 +34,6 @@ void Sub::md_net_tracking_run()
     // update vertical speeds, acceleration and net tracking distance
     pos_control.set_max_speed_z(-get_pilot_speed_dn(), g.pilot_speed_up);
     pos_control.set_max_accel_z(g.pilot_accel_z);
-
-    // update net tracking velocity
-    net_track_vel = g.nettracking_velocity;
 
     // if not armed set throttle to zero and exit immediately
     if (!motors.armed()) {
@@ -70,7 +65,7 @@ void Sub::md_net_tracking_run()
     // if stereovision keeps receiving heading and distance information from stereo camera data via mavlink, run distance and attitude controllers
     if (stereovision.healthy())
     {
-        perform_net_tracking(forward_out, lateral_out);
+        nettracking.perform_net_tracking(forward_out, lateral_out);
 
         // overwrite forward command if it is sent by pilot
         if (fabsf(channel_forward->norm_input()) > inp_threshold)
@@ -166,109 +161,4 @@ void Sub::md_net_tracking_run()
     motors.set_pilot_throttle(channel_throttle->norm_input() - 0.5f);
     motors.set_forward(forward_out);
     motors.set_lateral(lateral_out);
-}
-
-// net tracking logic
-void Sub::perform_net_tracking(float &forward_out, float &lateral_out)
-{
-    // time difference (in seconds) between two measurements from stereo vision is used to lowpass filter the data
-    float dt = stereovision.get_time_delta_usec() / 1000000.0f;
-
-    if (dt > 2.0f)
-    {
-        attitude_control.reset_yaw_err_filter();
-    }
-
-    // only update target distance and attitude, if new measurement from stereo data available
-    bool update_target = stereovision.get_last_update_ms() - last_stereo_update_ms != 0;
-
-    last_stereo_update_ms = stereovision.get_last_update_ms();
-
-    // whether to perform vision based attitude control
-    bool att_ctrl;
-
-    if (g.nettracking_mesh_ctrl)
-    {
-        // retrieve amount of currently visible net meshes
-        float cur_mesh_cnt = stereovision.get_mesh_count();
-
-
-        // desired mesh count (control the square root of current mesh count, since total meshcount grows quadratically over the distance to the net)
-        // but we want a linear dependency between control input (forward throttle) and control variable (square rooted mesh count)
-        float d_mesh_cnt = g.nettracking_mesh_cnt;
-        float mesh_cnt_error = safe_sqrt(cur_mesh_cnt) - d_mesh_cnt;
-
-        // get forward command from mesh count controller
-        pos_control.update_mesh_cnt_controller(forward_out, mesh_cnt_error, dt, update_target);
-
-        att_ctrl = abs(mesh_cnt_error) < 10.0f;
-
-    }
-    else
-    {
-        // retrieve current distance from stereovision module
-        float cur_dist = stereovision.get_distance();
-
-        // desired distance (m)
-        float d_dist = float(g.nettracking_distance) / 100.0f;
-        float dist_error = cur_dist - d_dist;
-
-        // get forward command from distance controller
-        pos_control.update_dist_controller(forward_out, dist_error, dt, update_target);
-
-        att_ctrl = abs(dist_error) < 1.0f;
-    }
-
-
-
-    // if distance error is small enough, use the stereovision heading data to always orientate the vehicle normal to the faced object surface
-    if (att_ctrl)
-    {
-        // no roll desired
-        float target_roll = 0.0f;
-
-        // get pitch and yaw offset (in centidegrees) with regard to the faced object (net) in front
-        float target_pitch_error = stereovision.get_delta_pitch();
-        float target_yaw_error = stereovision.get_delta_yaw();
-
-        // assume concave net shape -> only allow increasing/decreasing of yaw error w.r.t. the direction of movement
-//        float scan_dir = is_negative(float(net_track_vel)) ? -1.0f : 1.0f;
-//        target_yaw_error = scan_dir * target_yaw_error < 0 ? target_yaw_error : 0;
-
-        // only change pitch when changing altitude
-//        target_pitch_error = fabsf(channel_throttle->norm_input()-0.5f) > 0.05f ? target_pitch_error : 0.0f;
-
-        // the target values will be ignored, if no new stereo vision data received (update_target = false)
-        // this will update the target attitude corresponding to the current errors and trigger the attitude controller
-        attitude_control.input_euler_roll_pitch_yaw_accumulate(target_roll, target_pitch_error, target_yaw_error, dt, update_target);
-
-        // scale net tracking velocity proportional to yaw error
-//        float ls_tmp = target_yaw_error / 2000.0f;
-//        float lat_scale_f = ls_tmp * ls_tmp * ls_tmp; // ... to be beautified
-
-//        // set commands for lateral motion
-//        lateral_out = (1.0f + lat_scale_f) * net_track_vel / 100.0f;
-
-        float mesh_distr = stereovision.get_mesh_distr();
-        nettr_toggle_velocity = nettr_toggle_velocity || fabs(mesh_distr - 0.5f) < 0.1f;
-        float distr_thr = 0.15f;
-        bool net_edge_reached = mesh_distr < distr_thr || mesh_distr > (1.0f - distr_thr);
-        if (nettr_toggle_velocity && net_edge_reached)
-        {
-            nettr_direction *= -1.0f;
-            nettr_toggle_velocity = false;
-        }
-
-        lateral_out = nettr_direction * net_track_vel / 1000.0f;
-    }
-    else
-    {
-        // if the distance is too large, the vehicle is supposed to obtain the current attitude and to not move laterally
-        // call attitude controller
-        attitude_control.input_euler_roll_pitch_yaw_accumulate(0.0f, 0.0f, 0.0f, dt, false);
-
-        // no lateral movement
-        lateral_out = 0.0f;
-    }
-
 }

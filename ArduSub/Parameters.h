@@ -211,11 +211,8 @@ public:
         k_param_lights_steps,
         k_param_pilot_speed_dn,
 
-        // Net Tracking Mode Parameters
-        k_param_nettracking_distance = 240,
-        k_param_nettracking_velocity,
-        k_param_nettracking_mesh_ctrl,
-        k_param_nettracking_mesh_cnt
+        //Net Tracking library
+        k_param_nettracking
 
     };
 
@@ -309,12 +306,6 @@ public:
 
     AP_Float                surface_depth;
     AP_Int8                 frame_configuration;
-
-    // Net tracking parameters
-    AP_Int16 nettracking_distance;
-    AP_Int16 nettracking_velocity;
-    AP_Int8 nettracking_mesh_ctrl;
-    AP_Int32 nettracking_mesh_cnt;
 
     // Note: keep initializers here in the same order as they are declared
     // above.

@@ -21,6 +21,7 @@ def build(bld):
             'AP_Arming',
             'AP_KDECAN',
             'AP_StereoVision',
+            'AP_NetTracking',
         ],
     )
 

@@ -36,38 +36,6 @@ const AP_Param::Info Sub::var_info[] = {
     // @User: Standard
     GSCALAR(surface_depth, "SURFACE_DEPTH", SURFACE_DEPTH_DEFAULT),
 
-    // @Param: NETTRACKING_DIST
-    // @DisplayName: Desired distance to the fish net
-    // @Description: Distance to the fish net in centimeters, which the vehicle is supposed to obtain during net tracking
-    // @Units: cm
-    // @Range: 0 300
-    // @User: Standard
-    GSCALAR(nettracking_distance, "NETTRACKING_DIST", NETTRACKING_DIST_DEFAULT),
-
-
-    // @Param: NETTRACKING_VEL
-    // @DisplayName: Lateral velocity during scan of fish net
-    // @Description: Lateral velocity of the vehicle during scan of fish net
-    // @Units: cm/s
-    // @Range: -100 100
-    // @User: Standard
-    GSCALAR(nettracking_velocity, "NETTRACKING_VEL", NETTRACKING_VEL_DEFAULT),
-
-    // @Param: NETTR_MESH_CTRL
-    // @DisplayName: Control the amount of visible net meshes
-    // @Description: Control the amount of visible net meshes
-    // @Values: 0:Disables, 1:Enabled
-    // @User: Standard
-    GSCALAR(nettracking_mesh_ctrl, "NETTR_MESH_CTRL", NETTR_MESH_CTRL_DEFAULT),
-
-    // @Param: NETTR_MESH_CNT
-    // @DisplayName: Square root of desired amount of visble net meshes
-    // @Description: The square root of desired reference amount of visble net meshes during net tracking
-    // @Units:
-    // @Range: 10 100
-    // @User: Standard
-    GSCALAR(nettracking_mesh_cnt, "NETTR_MESH_CNT", NETTR_MESH_CNT_DEFAULT),
-
     // @Param: CONTROL_FRAME
     // @DisplayName: Control frame where pilot commands are interpreted in
     // @Description:  Control coordinate frame where pilot commands are interpreted in
@@ -578,6 +546,10 @@ const AP_Param::Info Sub::var_info[] = {
     // @Group: MOT_
     // @Path: ../libraries/AP_Motors/AP_Motors6DOF.cpp,../libraries/AP_Motors/AP_MotorsMulticopter.cpp
     GOBJECT(motors, "MOT_",         AP_Motors6DOF),
+
+    // @Group: NETTR_
+    // @Path: ../libraries/AP_NetTracking/AP_NetTracking.cpp
+    GOBJECT(nettracking, "NETTR_",         AP_NetTracking),
 
 #if RCMAP_ENABLED == ENABLED
     // @Group: RCMAP_
