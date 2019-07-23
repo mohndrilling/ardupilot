@@ -21,6 +21,11 @@ bool Sub::md_net_tracking_init()
     // set control frame to 'body'
     g.control_frame = CF_Body;
 
+    // set initial net tracking velocity
+    net_track_vel = g.nettracking_velocity;
+
+//    attitude_control.reset_target_attitude();
+
     return true;
 }
 
@@ -31,6 +36,9 @@ void Sub::md_net_tracking_run()
     // update vertical speeds, acceleration and net tracking distance
     pos_control.set_max_speed_z(-get_pilot_speed_dn(), g.pilot_speed_up);
     pos_control.set_max_accel_z(g.pilot_accel_z);
+
+    // update net tracking velocity
+    net_track_vel = g.nettracking_velocity;
 
     // if not armed set throttle to zero and exit immediately
     if (!motors.armed()) {
@@ -188,12 +196,12 @@ void Sub::perform_net_tracking(float &forward_out, float &lateral_out)
         // desired mesh count (control the square root of current mesh count, since total meshcount grows quadratically over the distance to the net)
         // but we want a linear dependency between control input (forward throttle) and control variable (square rooted mesh count)
         float d_mesh_cnt = g.nettracking_mesh_cnt;
-        float mesh_cnt_error = sqrt(cur_mesh_cnt) - d_mesh_cnt;
+        float mesh_cnt_error = safe_sqrt(cur_mesh_cnt) - d_mesh_cnt;
 
         // get forward command from mesh count controller
         pos_control.update_mesh_cnt_controller(forward_out, mesh_cnt_error, dt, update_target);
 
-        att_ctrl = abs(mesh_cnt_error) < 3.0f;
+        att_ctrl = abs(mesh_cnt_error) < 10.0f;
 
     }
     else
@@ -208,7 +216,7 @@ void Sub::perform_net_tracking(float &forward_out, float &lateral_out)
         // get forward command from distance controller
         pos_control.update_dist_controller(forward_out, dist_error, dt, update_target);
 
-        att_ctrl = abs(dist_error) < 0.3f;
+        att_ctrl = abs(dist_error) < 1.0f;
     }
 
 
@@ -224,7 +232,7 @@ void Sub::perform_net_tracking(float &forward_out, float &lateral_out)
         float target_yaw_error = stereovision.get_delta_yaw();
 
         // assume concave net shape -> only allow increasing/decreasing of yaw error w.r.t. the direction of movement
-//        float scan_dir = is_negative(float(g.nettracking_velocity)) ? -1.0f : 1.0f;
+//        float scan_dir = is_negative(float(net_track_vel)) ? -1.0f : 1.0f;
 //        target_yaw_error = scan_dir * target_yaw_error < 0 ? target_yaw_error : 0;
 
         // only change pitch when changing altitude
@@ -235,10 +243,23 @@ void Sub::perform_net_tracking(float &forward_out, float &lateral_out)
         attitude_control.input_euler_roll_pitch_yaw_accumulate(target_roll, target_pitch_error, target_yaw_error, dt, update_target);
 
         // scale net tracking velocity proportional to yaw error
-        float lat_scale_f = pow(target_yaw_error / 2000.0f, 3.0f);
+//        float ls_tmp = target_yaw_error / 2000.0f;
+//        float lat_scale_f = ls_tmp * ls_tmp * ls_tmp; // ... to be beautified
 
-        // set commands for lateral motion
-        lateral_out = (1.0f + lat_scale_f) * g.nettracking_velocity / 100.0f;
+//        // set commands for lateral motion
+//        lateral_out = (1.0f + lat_scale_f) * net_track_vel / 100.0f;
+
+        float mesh_distr = stereovision.get_mesh_distr();
+        nettr_toggle_velocity = nettr_toggle_velocity || fabs(mesh_distr - 0.5f) < 0.1f;
+        float distr_thr = 0.15f;
+        bool net_edge_reached = mesh_distr < distr_thr || mesh_distr > (1.0f - distr_thr);
+        if (nettr_toggle_velocity && net_edge_reached)
+        {
+            nettr_direction *= -1.0f;
+            nettr_toggle_velocity = false;
+        }
+
+        lateral_out = nettr_direction * net_track_vel / 1000.0f;
     }
     else
     {

@@ -30,7 +30,7 @@ public:
 protected:
 
     // set deltas (used by backend to update state)
-    void set_stereovision_odometry(const Vector3f &lin_velocity, float distance, float delta_pitch, float delta_yaw, uint32_t mesh_count, uint64_t time_delta_usec, float confidence);
+    void set_stereovision_odometry(const Vector3f &lin_velocity, float distance, float delta_pitch, float delta_yaw, uint32_t mesh_count, float mesh_distr, uint64_t time_delta_usec, float confidence);
 
 private:
 
