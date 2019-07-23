@@ -56,6 +56,8 @@ public:
 
     void reset_yaw_err_filter() { _yaw_error_filter.reset(); }
 
+    void reset_target_attitude();
+
     // are we producing min throttle?
     bool is_throttle_mix_min() const override { return (_throttle_rpy_mix < 1.25f*_thr_mix_min); }
 

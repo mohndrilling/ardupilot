@@ -294,6 +294,22 @@ void AC_AttitudeControl_Sub::update_throttle_rpy_mix()
     _throttle_rpy_mix = constrain_float(_throttle_rpy_mix, 0.1f, AC_ATTITUDE_CONTROL_MAX);
 }
 
+// set target euler angles to current euler angles - called at initialization of net tracking mode
+void AC_AttitudeControl_Sub::reset_target_attitude()
+{
+    // retrieve euler angles of current vehicle attitude
+    float current_roll, current_pitch, current_yaw;
+
+    Quaternion vehicle_attitude;
+    _ahrs.get_quat_body_to_ned(vehicle_attitude);
+    vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
+
+    // reset angles - roll is set to zero
+    _target_roll_cd = 0.0f;
+    _target_pitch_cd = RadiansToCentiDegrees(current_pitch);
+    _target_yaw_cd = RadiansToCentiDegrees(current_yaw);
+}
+
 void AC_AttitudeControl_Sub::rate_controller_run()
 {
     // move throttle vs attitude mixing towards desired (called from here because this is conveniently called on every iteration)

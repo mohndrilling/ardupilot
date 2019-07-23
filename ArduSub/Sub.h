@@ -705,6 +705,9 @@ private:
     uint32_t last_control_frame_fail = 0;
 
     uint32_t last_stereo_update_ms = 0;
+    float net_track_vel;
+    bool nettr_toggle_velocity = false;
+    float nettr_direction = 1.0f;
 
     bool control_check_barometer();
 

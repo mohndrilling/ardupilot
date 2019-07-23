@@ -34,5 +34,5 @@ void AP_StereoVision_MAV::handle_msg(const mavlink_message_t *msg)
 
     const Vector3f lin_velocity(packet.lin_velocity[0], packet.lin_velocity[1], packet.lin_velocity[2]);
 
-    set_stereovision_odometry(lin_velocity, packet.distance, packet.delta_pitch, packet.delta_yaw, packet.mesh_count, packet.time_delta_usec, packet.confidence);
+    set_stereovision_odometry(lin_velocity, packet.distance, packet.delta_pitch, packet.delta_yaw, packet.mesh_count, packet.mesh_distr, packet.time_delta_usec, packet.confidence);
 }
