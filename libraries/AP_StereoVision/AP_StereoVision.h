@@ -44,7 +44,7 @@ public:
 
     // The AP_StereoVisionState structure is filled in by the backend driver
     struct AP_StereoVisionState {
-        Vector3f lin_velocity;       // linear velocity with regard to body frame
+        Vector2f opt_flow;       // linear velocity with regard to body frame
         float distance;    // distance to nearest poincloud in front
         float delta_pitch; // difference pitch angle (centi-degrees) between the vehicle's heading and the targeted object plane
         float delta_yaw; // difference yaw angle (centi-degrees) between the vehicle's heading and the targeted object plane
@@ -79,7 +79,7 @@ public:
     static const struct AP_Param::GroupInfo var_info[];
 
     // state accessors
-    const Vector3f &get_lin_velocity() const { return _state.lin_velocity; }
+    const Vector2f &get_opt_flow() const { return _state.opt_flow; }
     const float &get_distance() const { return _state.distance; }
     const float &get_delta_pitch() const { return _state.delta_pitch; }
     const float &get_delta_yaw() const { return _state.delta_yaw; }

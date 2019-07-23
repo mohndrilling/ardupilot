@@ -89,28 +89,8 @@ void AP_StereoVision::update()
 
     _state.last_processed_sensor_update_ms = _state.last_sensor_update_ms;
 
-//    gcs().send_text(MAV_SEVERITY_INFO, "[STEREO_VISION] vx: %5.3f  vy: %5.3f  vz: %5.3f  dist: %5.3f", (double)_state.lin_velocity[0], (double) _state.lin_velocity[1], _state.lin_velocity[2], (double) _state.distance);
+//    gcs().send_text(MAV_SEVERITY_INFO, "[STEREO_VISION] vx: %5.3f  vy: %5.3f dist: %5.3f", (double)_state.opt_flow[0], (double) _state.opt_flow[1], (double) _state.distance);
 
-//    // check for updates
-//    if (_state.last_processed_sensor_update_ms == _state.last_sensor_update_ms) {
-//        // This reading has already been processed
-//        return;
-//    }
-//    _state.last_processed_sensor_update_ms = _state.last_sensor_update_ms;
-
-//    const float time_delta_sec = get_time_delta_usec() / 1000000.0f;
-
-//    AP::ahrs_navekf().writeBodyFrameOdom(get_confidence(),
-//                                         get_position_delta(),
-//                                         get_angle_delta(),
-//                                         time_delta_sec,
-//                                         get_last_update_ms(),
-//                                         get_pos_offset());
-//    // log sensor data
-//    AP::logger().Write_VisualOdom(time_delta_sec,
-//                                  get_angle_delta(),
-//                                  get_position_delta(),
-//                                  get_confidence());
 }
 
 // return true if sensor is basically healthy (we are receiving data)
