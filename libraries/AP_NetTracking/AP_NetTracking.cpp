@@ -46,8 +46,29 @@ const AP_Param::GroupInfo AP_NetTracking::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("CTRL_VAR", 4, AP_NetTracking, _control_var, AP_NETTRACKING_CTRL_VAR_DEFAULT),
 
+    // @Param: VEL_CTRL
+    // @DisplayName: Whether to use optical flow input to control the lateral velocity of the vehicle
+    // @Description: Whether to use optical flow input to control the lateral velocity of the vehicle
+    // @Values: 0:Disabled 1:Enabled
+    // @User: Advanced
+    AP_GROUPINFO("VEL_CTRL", 5, AP_NetTracking, _velocity_ctrl, AP_NETTRACKING_VEL_CTRL_DEFAULT),
+
+    // @Param: OPTFL_HZ
+    // @DisplayName: Cut off frequency for low pass filter of optical flow input
+    // @Description: Cut off frequency for low pass filter of optical flow input
+    // @Units: Hz
+    // @Range: 0.0 10.0
+    // @Increment: 0.1
+    // @User: Advanced
+    AP_GROUPINFO("OPTFL_HZ", 6, AP_NetTracking, _opt_flow_cutoff_freq, AP_NETTRACKING_OPT_FLOW_CUTOFF_FREQ_DEFAULT),
+
     AP_GROUPEND
 };
+
+void AP_NetTracking::reset()
+{
+    _opt_flow_filt.reset();
+}
 
 void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out)
 {
@@ -60,9 +81,9 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
     }
 
     // only update target distance and attitude, if new measurement from stereo data available
-    bool update_target = _stereo_vision.get_last_update_ms() - last_stereo_update_ms != 0;
+    bool update_target = _stereo_vision.get_last_update_ms() - _last_stereo_update_ms != 0;
 
-    last_stereo_update_ms = _stereo_vision.get_last_update_ms();
+    _last_stereo_update_ms = _stereo_vision.get_last_update_ms();
 
     // whether to perform vision based attitude control
     bool att_ctrl;
@@ -112,7 +133,7 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
         float target_yaw_error = _stereo_vision.get_delta_yaw();
 
         // assume concave net shape -> only allow increasing/decreasing of yaw error w.r.t. the direction of movement
-//        float scan_dir = is_negative(float(net_track_vel)) ? -1.0f : 1.0f;
+//        float scan_dir = is_negative(float(_nettr_velocity)) ? -1.0f : 1.0f;
 //        target_yaw_error = scan_dir * target_yaw_error < 0 ? target_yaw_error : 0;
 
         // only change pitch when changing altitude
@@ -127,28 +148,68 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
 //        float lat_scale_f = ls_tmp * ls_tmp * ls_tmp; // ... to be beautified
 
 //        // set commands for lateral motion
-//        lateral_out = (1.0f + lat_scale_f) * net_track_vel / 100.0f;
+//        lateral_out = (1.0f + lat_scale_f) * _nettr_velocity / 100.0f;
 
 
         // update net tracking velocity
-        net_track_vel = _tracking_velocity;
+        if (_velocity_ctrl)
+        {
+            Vector2f opt_flow = _stereo_vision.get_opt_flow();
+
+            // lowpass filter
+            if (update_target)
+            {
+                _opt_flow_filt.set_cutoff_frequency(_opt_flow_cutoff_freq);
+                // append negative value, because x-axes (and z-axes) of coordinate systems used in optical flow estimation and ardusub are pointing in opposite directions
+                _opt_flow_filt.apply(-opt_flow, dt);
+
+                _opt_flow_sumx -= dt * opt_flow.x;
+                _opt_flow_sumy += dt * opt_flow.y;
+
+            }
+
+            // call controller to hold desired lateral velocity
+            // desired optical flow
+            float d_optfl_x = _nettr_direction * _tracking_velocity;
+            float optfl_x_error = d_optfl_x - _opt_flow_filt.get().x;
+
+            // get forward command from mesh count controller
+            _pos_control.update_optfl_controller(_nettr_velocity, optfl_x_error, dt, update_target);
+
+            gcs().send_named_float("optfl_x", _opt_flow_filt.get().x);
+            gcs().send_named_float("optfl_y", _opt_flow_filt.get().y);
+
+            gcs().send_named_float("optfl_sumx", _opt_flow_sumx);
+            gcs().send_named_float("optfl_sumy", _opt_flow_sumy);
+
+            gcs().send_named_float("lat_out", _nettr_velocity);
+            gcs().send_named_float("optfl_err", optfl_x_error);
+
+
+        }
+        else
+        {
+            _nettr_velocity = _nettr_direction * _tracking_velocity;
+        }
+
 
         // if the net shape equals an open plane, perform net edge detection based on the mesh distribution on the current image
         // if net edge detected, reverse the lateral output velocity
         if (_net_shape == NetShape::Plane)
         {
             float mesh_distr = _stereo_vision.get_mesh_distr();
-            nettr_toggle_velocity = nettr_toggle_velocity || fabs(mesh_distr - 0.5f) < 0.1f;
+            _nettr_toggle_velocity = _nettr_toggle_velocity || fabs(mesh_distr - 0.5f) < 0.1f;
             float distr_thr = 0.15f;
             bool net_edge_reached = mesh_distr < distr_thr || mesh_distr > (1.0f - distr_thr);
-            if (nettr_toggle_velocity && net_edge_reached)
+            if (_nettr_toggle_velocity && net_edge_reached)
             {
-                nettr_direction *= -1.0f;
-                nettr_toggle_velocity = false;
+                _nettr_direction *= -1.0f;
+                _nettr_toggle_velocity = false;
+                _pos_control.relax_optfl_controller();
             }
         }
 
-        lateral_out = nettr_direction * net_track_vel / 1000.0f;
+        lateral_out = _nettr_velocity / 250.0f;
     }
     else
     {

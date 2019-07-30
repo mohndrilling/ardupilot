@@ -7,7 +7,8 @@ AC_PosControl_Sub::AC_PosControl_Sub(AP_AHRS_View& ahrs, const AP_InertialNav& i
     _alt_max(0.0f),
     _alt_min(0.0f),
     _pid_dist(POSCONTROL_DIST_P, POSCONTROL_DIST_I, POSCONTROL_DIST_D, 0.0f, POSCONTROL_DIST_IMAX, 0.0f, POSCONTROL_DIST_FILT_HZ, 0.0f, POSCONTROL_DIST_DT),
-    _pid_mesh_cnt(POSCONTROL_MESH_CNT_P, POSCONTROL_MESH_CNT_I, POSCONTROL_MESH_CNT_D, 0.0f, POSCONTROL_MESH_CNT_IMAX, 0.0f, POSCONTROL_MESH_CNT_FILT_HZ, 0.0f, POSCONTROL_MESH_CNT_DT)
+    _pid_mesh_cnt(POSCONTROL_MESH_CNT_P, POSCONTROL_MESH_CNT_I, POSCONTROL_MESH_CNT_D, 0.0f, POSCONTROL_MESH_CNT_IMAX, 0.0f, POSCONTROL_MESH_CNT_FILT_HZ, 0.0f, POSCONTROL_MESH_CNT_DT),
+    _pid_optfl(POSCONTROL_OPTFL_P, POSCONTROL_OPTFL_I, POSCONTROL_OPTFL_D, 0.0f, POSCONTROL_OPTFL_IMAX, 0.0f, POSCONTROL_OPTFL_FILT_HZ, 0.0f, POSCONTROL_OPTFL_DT)
 {}
 
 /// set_alt_target_from_climb_rate - adjusts target up or down using a climb rate in cm/s
@@ -155,4 +156,27 @@ void AC_PosControl_Sub::update_mesh_cnt_controller(float& target_forward, float 
     ff = _pid_mesh_cnt.get_ff();
 
     target_forward = p + i + d + ff;
+}
+
+
+void AC_PosControl_Sub::update_optfl_controller(float& target_lateral, float optfl_error, float dt, bool update)
+{
+    // simple pid controller for optfl control
+    float p, i, d, ff;
+
+    if (update)
+    {
+        _pid_optfl.set_dt(dt);
+        target_lateral = _pid_optfl.update_all(optfl_error, 0.0f, false);
+    }
+
+    // probably better to use square root constrain
+    p = _pid_optfl.get_p();
+    p = constrain_float(p, -POSCONTROL_OPTFL_PMAX, POSCONTROL_OPTFL_PMAX);
+
+    i = _pid_optfl.get_i();
+    d = _pid_optfl.get_d();
+    ff = _pid_optfl.get_ff();
+
+    target_lateral = p + i + d + ff;
 }
