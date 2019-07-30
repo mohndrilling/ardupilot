@@ -6,19 +6,28 @@
 # define POSCONTROL_DIST_P                    0.3f    // distance controller P gain default
 # define POSCONTROL_DIST_I                    3.0f    // distance controller I gain default
 # define POSCONTROL_DIST_D                    0.0f    // distance controller D gain default
-# define POSCONTROL_DIST_IMAX                 0.01f     // distance controller IMAX gain default
+# define POSCONTROL_DIST_IMAX                 0.01f   // distance controller IMAX gain default
 # define POSCONTROL_DIST_FILT_HZ              10.0f   // distance controller input filter default
 # define POSCONTROL_DIST_DT                   0.01f   // distance controller dt default
 # define POSCONTROL_DIST_PMAX                 0.15f   // distance controller PMAX gain default
 
 // mesh count controller default definitions
-# define POSCONTROL_MESH_CNT_P                    0.02f    // distance controller P gain default
-# define POSCONTROL_MESH_CNT_I                    0.5f    // distance controller I gain default
-# define POSCONTROL_MESH_CNT_D                    0.0f    // distance controller D gain default
-# define POSCONTROL_MESH_CNT_IMAX                 0.001f     // distance controller IMAX gain default
-# define POSCONTROL_MESH_CNT_FILT_HZ              10.0f   // distance controller input filter default
-# define POSCONTROL_MESH_CNT_DT                   0.01f   // distance controller dt default
-# define POSCONTROL_MESH_CNT_PMAX                 0.08f   // distance controller PMAX gain default
+# define POSCONTROL_MESH_CNT_P                    0.02f   // mesh controller P gain default
+# define POSCONTROL_MESH_CNT_I                    0.5f    // mesh controller I gain default
+# define POSCONTROL_MESH_CNT_D                    0.0f    // mesh controller D gain default
+# define POSCONTROL_MESH_CNT_IMAX                 0.001f  // mesh controller IMAX gain default
+# define POSCONTROL_MESH_CNT_FILT_HZ              10.0f   // mesh controller input filter default
+# define POSCONTROL_MESH_CNT_DT                   0.01f   // mesh controller dt default
+# define POSCONTROL_MESH_CNT_PMAX                 0.08f   // mesh controller PMAX gain default
+
+// optfl lateral controller default definitions
+# define POSCONTROL_OPTFL_P                    0.0f   // opt flow controller P gain default
+# define POSCONTROL_OPTFL_I                    10.0f    // opt flow controller I gain default
+# define POSCONTROL_OPTFL_D                    0.0f    // opt flow controller D gain default
+# define POSCONTROL_OPTFL_IMAX                 50.0f  // opt flow controller IMAX gain default
+# define POSCONTROL_OPTFL_FILT_HZ              0.0f   // opt flow controller input filter default
+# define POSCONTROL_OPTFL_DT                   0.01f   // opt flow controller dt default
+# define POSCONTROL_OPTFL_PMAX                 20.0f   // opt flow controller PMAX gain default
 
 class AC_PosControl_Sub : public AC_PosControl {
 public:
@@ -64,6 +73,12 @@ public:
     /// control currently visible net meshes
     void update_mesh_cnt_controller(float& target_forward, float mesh_cnt_error, float dt, bool update);
 
+    /// control lateral velocity based on optical flow input error
+    void update_optfl_controller(float& target_lateral, float optfl_error, float dt, bool update);
+
+    /// reset the integrator of the optical flow controller
+    void relax_optfl_controller() { _pid_optfl.reset_I(); }
+
 private:
     float       _alt_max; // max altitude - should be updated from the main code with altitude limit from fence
     float       _alt_min; // min altitude - should be updated from the main code with altitude limit from fence
@@ -73,6 +88,8 @@ private:
     AC_PID      _pid_dist; // distance controller
 
     AC_PID      _pid_mesh_cnt; // mesh_cnt controller
+
+    AC_PID      _pid_optfl; // opt_flow controller
 
 
 };
