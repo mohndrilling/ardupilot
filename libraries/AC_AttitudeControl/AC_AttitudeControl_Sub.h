@@ -54,9 +54,14 @@ public:
     void set_throttle_mix_man() override { _throttle_rpy_mix_desired = _thr_mix_man; }
     void set_throttle_mix_max() override { _throttle_rpy_mix_desired = _thr_mix_max; }
 
+    // resets low pass filter for yaw error
     void reset_yaw_err_filter() { _yaw_error_filter.reset(); }
 
+    // sets target attitude values to zero
     void reset_target_attitude();
+
+    // returns accumulated yaw angle, used for avoidance of tether tangling
+    float get_accumulated_yaw() { return _yaw_accumulated; }
 
     // are we producing min throttle?
     bool is_throttle_mix_min() const override { return (_throttle_rpy_mix < 1.25f*_thr_mix_min); }
@@ -78,6 +83,9 @@ protected:
     // get maximum value throttle can be raised to based on throttle vs attitude prioritisation
     float get_throttle_avg_max(float throttle_in);
 
+    // accumulate absolute yaw angle to monitor tangling of tether
+    void tangling_monitor_update();
+
     AP_MotorsMulticopter& _motors_multi;
     AC_PID                _pid_rate_roll;
     AC_PID                _pid_rate_pitch;
@@ -95,4 +103,6 @@ protected:
     float _target_yaw_cd;
 
     bool _last_yaw_err_negative;
+
+    float _yaw_accumulated; // accumulated yaw angle in degrees
 };
