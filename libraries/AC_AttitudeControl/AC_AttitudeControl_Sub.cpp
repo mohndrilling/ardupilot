@@ -3,10 +3,6 @@
 #include <AP_Math/AP_Math.h>
 #include <GCS_MAVLink/GCS.h>
 
-static uint8_t debug_counter = 0;
-static int debug_freq = 20;
-static int debug_cnt_limit = int(400 / float(debug_freq));
-
 // table of user settable parameters
 const AP_Param::GroupInfo AC_AttitudeControl_Sub::var_info[] = {
     // parameters from parent vehicle
@@ -356,20 +352,16 @@ void AC_AttitudeControl_Sub::parameter_sanity_check()
 
 void AC_AttitudeControl_Sub::tangling_monitor_update()
 {
-    if (debug_counter > debug_cnt_limit)
-    {
-        float current_roll, current_pitch, current_yaw;
-        Quaternion vehicle_attitude;
-        _ahrs.get_quat_body_to_ned(vehicle_attitude);
-        vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
+    float current_roll, current_pitch, current_yaw;
+    Quaternion vehicle_attitude;
+    _ahrs.get_quat_body_to_ned(vehicle_attitude);
+    vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
 
-        // get difference yaw angle with regard to last measurement
-        // if yaw angle jumped from 180 to -180 add 360 degrees, if yaw angle jumped from 180 to -180 subtract 360 degrees
-        float delta_yaw = degrees(current_yaw) - _yaw_accumulated;
-        delta_yaw += (delta_yaw > 180.0f) ? -360.0f : (delta_yaw <- 180.0f) ? 360.0f : 0.0f;
+    // get difference yaw angle with regard to last measurement
+    // if yaw angle jumped from 180 to -180 add 360 degrees, if yaw angle jumped from 180 to -180 subtract 360 degrees
+    float delta_yaw = degrees(current_yaw) - _yaw_accumulated;
+    delta_yaw += (delta_yaw > 180.0f) ? -360.0f : (delta_yaw <- 180.0f) ? 360.0f : 0.0f;
 
-        _yaw_accumulated += delta_yaw;
-        gcs().send_named_float("cur_yaw", _yaw_accumulated);
-    }
-    debug_counter = debug_counter > debug_cnt_limit ? 0 : debug_counter + 1;
+    _yaw_accumulated += delta_yaw;
+
 }

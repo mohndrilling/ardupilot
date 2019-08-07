@@ -24,6 +24,8 @@ bool Sub::md_net_tracking_init()
     // set attitude target to current attitude
     attitude_control.reset_target_attitude();
 
+    nettracking.init();
+
     return true;
 }
 
