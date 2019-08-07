@@ -70,6 +70,11 @@ void AP_NetTracking::reset()
     _opt_flow_filt.reset();
 }
 
+void AP_NetTracking::init()
+{
+    _initial_yaw = _attitude_control.get_accumulated_yaw();
+}
+
 void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out)
 {
     // time difference (in seconds) between two measurements from stereo vision is used to lowpass filter the data
@@ -150,37 +155,37 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
 //        // set commands for lateral motion
 //        lateral_out = (1.0f + lat_scale_f) * _nettr_velocity / 100.0f;
 
+        // update optical flow input
+        Vector2f opt_flow = _stereo_vision.get_opt_flow();
 
-        // update net tracking velocity
-        if (_velocity_ctrl)
+        // lowpass filter
+        if (update_target)
         {
-            Vector2f opt_flow = _stereo_vision.get_opt_flow();
+            _opt_flow_filt.set_cutoff_frequency(_opt_flow_cutoff_freq);
+            // append negative value, because x-axes (and z-axes) of coordinate systems used in optical flow estimation and ardusub are pointing in opposite directions
+            _opt_flow_filt.apply(-opt_flow, dt);
 
-            // lowpass filter
-            if (update_target)
-            {
-                _opt_flow_filt.set_cutoff_frequency(_opt_flow_cutoff_freq);
-                // append negative value, because x-axes (and z-axes) of coordinate systems used in optical flow estimation and ardusub are pointing in opposite directions
-                _opt_flow_filt.apply(-opt_flow, dt);
-
-                _opt_flow_sumx -= dt * opt_flow.x;
-                _opt_flow_sumy += dt * opt_flow.y;
-
-            }
-
-            // call controller to hold desired lateral velocity
-            // desired optical flow
-            float d_optfl_x = _nettr_direction * _tracking_velocity;
-            float optfl_x_error = d_optfl_x - _opt_flow_filt.get().x;
-
-            // get forward command from mesh count controller
-            _pos_control.update_optfl_controller(_nettr_velocity, optfl_x_error, dt, update_target);
+            _opt_flow_sumx -= dt * opt_flow.x;
+            _opt_flow_sumy += dt * opt_flow.y;
 
             gcs().send_named_float("optfl_x", _opt_flow_filt.get().x);
             gcs().send_named_float("optfl_y", _opt_flow_filt.get().y);
 
             gcs().send_named_float("optfl_sumx", _opt_flow_sumx);
             gcs().send_named_float("optfl_sumy", _opt_flow_sumy);
+
+        }
+
+        // update net tracking velocity
+        if (_velocity_ctrl)
+        {
+            // call controller to hold desired lateral velocity
+            // desired optical flow
+            float d_optfl_x = _nettr_direction * _tracking_velocity;
+            float optfl_x_error = d_optfl_x - _opt_flow_filt.get().x;
+
+            // get forward command from mesh count controller
+            _pos_control.update_optfl_controller(_nettr_velocity, optfl_x_error, dt, update_target);           
 
             gcs().send_named_float("lat_out", _nettr_velocity);
             gcs().send_named_float("optfl_err", optfl_x_error);
@@ -206,6 +211,18 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
                 _nettr_direction *= -1.0f;
                 _nettr_toggle_velocity = false;
                 _pos_control.relax_optfl_controller();
+            }
+        }
+        else if (_net_shape == NetShape::Tube)
+        {
+            // check if ROV has performed 360 degrees of scanning
+            if (fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) > 360.0f)
+            {
+                // toggle scanning direction
+                _nettr_direction *= -1;
+                _initial_yaw = _attitude_control.get_accumulated_yaw();
+
+                _attitude_control.reset_yaw_err_filter();
             }
         }
 

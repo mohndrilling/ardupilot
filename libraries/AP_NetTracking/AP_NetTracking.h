@@ -42,6 +42,9 @@ public:
     // User settable parameters
     static const struct AP_Param::GroupInfo var_info[];
 
+    // init net tracking
+    void init();
+
     // perform net tracking: calls attitude and pos controller to maintain orthonormal heading and distance
     void perform_net_tracking(float &forward_out, float &lateral_out);
 
@@ -85,6 +88,9 @@ protected:
 
     float _opt_flow_sumx = 0;
     float _opt_flow_sumy = 0;
+
+    // stores the initial yaw value at start of net tracking. ROV should switch directions of lateral movements after 360 degrees scan
+    float _initial_yaw;
 
     // filter
     LowPassFilterVector2f _opt_flow_filt;
