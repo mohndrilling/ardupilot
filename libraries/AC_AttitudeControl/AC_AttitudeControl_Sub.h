@@ -55,7 +55,7 @@ public:
     void set_throttle_mix_max() override { _throttle_rpy_mix_desired = _thr_mix_max; }
 
     // resets low pass filter for yaw error
-    void reset_yaw_err_filter() { _yaw_error_filter.reset(); }
+    void reset_yaw_err_filter() { _yaw_error_filter.reset(0.0f); }
 
     // sets target attitude values to zero
     void reset_target_attitude();

@@ -17,7 +17,8 @@
 #define AP_NETTRACKING_VELOCITY_DEFAULT 0.0f
 #define AP_NETTRACKING_CTRL_VAR_DEFAULT ControlVar::ctrl_distance
 #define AP_NETTRACKING_VEL_CTRL_DEFAULT 1
-
+#define AP_NETTRACKING_THR_SPEED_DEFAULT 0.05f
+#define AP_NETTRACKING_OPTFL_THR_DIST_DEFAULT 20
 #define AP_NETTRACKING_OPT_FLOW_CUTOFF_FREQ_DEFAULT 0.2f
 
 class AP_NetTracking {
@@ -31,6 +32,8 @@ public:
                     _attitude_control(attitude_control),
                     _pos_control(pos_control),
                     _stereo_vision(stereo_vision),
+                    _state(State::Scanning),
+                    _perform_att_ctrl(false),
                     _opt_flow_filt(AP_NETTRACKING_OPT_FLOW_CUTOFF_FREQ_DEFAULT)
     {
         AP_Param::setup_object_defaults(this, var_info);
@@ -46,12 +49,27 @@ public:
     void init();
 
     // perform net tracking: calls attitude and pos controller to maintain orthonormal heading and distance
-    void perform_net_tracking(float &forward_out, float &lateral_out);
+    void perform_net_tracking(float &forward_out, float &lateral_out, float &throttle_out);
 
     // resets internal variables to default values
     void reset();
 
 protected:
+
+    // calculate lateral velocity (either static or based on optical flow)
+    void update_lateral_out(float &lateral_out, bool update_target, float dt);
+
+    // calculate forward velocity (either distance or mesh count controller)
+    void update_forward_out(float &forward_out, bool update_target, float dt);
+
+    // calls the attitude controller to achieve normal heading of the ROV w.r.t. the net plane
+    void update_heading_control(bool update_target, float dt);
+
+    // throttles the vehicle down by constant throttle
+    void update_throttle_out(float &throttle_out, bool update_target, float dt);
+
+    // updates the optical flow low pass filter by new measurement values and accumulates the absolute distance, the opt flow has travelled
+    void update_optical_flow(float dt);
 
     // References to external libraries
     const AP_AHRS_View&         _ahrs;
@@ -72,6 +90,13 @@ protected:
         ctrl_meshcount
     };
 
+    enum State
+    {
+      Scanning,
+      Throttle,
+      Pause
+    };
+
     // Parameters
     AP_Int8  _net_shape;
     AP_Int16 _tracking_distance;
@@ -80,6 +105,8 @@ protected:
     AP_Float _tracking_velocity;
     AP_Int8  _velocity_ctrl;
     AP_Float _opt_flow_cutoff_freq;
+    AP_Float _throttle_speed;
+    AP_Int32 _opt_flow_thr_dist;
 
     uint32_t _last_stereo_update_ms = 0;
     float _nettr_velocity;
@@ -90,10 +117,19 @@ protected:
     float _opt_flow_sumy = 0;
 
     // stores the initial yaw value at start of net tracking. ROV should switch directions of lateral movements after 360 degrees scan
-    float _initial_yaw;
+    float _initial_yaw;    
+
+    // stores the absolute distance, the optical flow has travelled along y-axis. This is stored when switching to throttle-state to track the distance that the image is "moving upwards" during throttling
+    float _initial_opt_flow_sumy;
+
+    // if distance error is small enough, use the stereovision heading data to always orientate the vehicle normal to the faced object surface
+    bool _perform_att_ctrl;
 
     // filter
-    LowPassFilterVector2f _opt_flow_filt;
+    LowPassFilterVector2f _opt_flow_filt;  // low pass filtering of optical flow input
+
+    // net tracking State
+    State _state;
 
 public:
 };

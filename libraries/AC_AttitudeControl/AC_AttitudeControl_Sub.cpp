@@ -219,7 +219,7 @@ void AC_AttitudeControl_Sub::input_euler_roll_pitch_yaw_accumulate(float euler_r
         _yaw_error_filter.set_cutoff_frequency(_yaw_filter_cut_off);
 
         if (_last_yaw_err_negative != (euler_yaw_offs_cd < 0))
-            _yaw_error_filter.reset();
+            _yaw_error_filter.reset(0.0f);
         _last_yaw_err_negative = euler_yaw_offs_cd < 0;
 
         // get lowpass filtered pitch and yaw errors
