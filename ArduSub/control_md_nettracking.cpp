@@ -53,7 +53,7 @@ void Sub::md_net_tracking_run()
     uint32_t tnow = AP_HAL::millis();
 
     // place holders for translational commands
-    float forward_out, lateral_out;
+    float forward_out, lateral_out, throttle_out;
 
     //threshold for pilot input commands
     float inp_threshold = 0.05f;
@@ -67,11 +67,14 @@ void Sub::md_net_tracking_run()
     // if stereovision keeps receiving heading and distance information from stereo camera data via mavlink, run distance and attitude controllers
     if (stereovision.healthy())
     {
-        nettracking.perform_net_tracking(forward_out, lateral_out);
+        nettracking.perform_net_tracking(forward_out, lateral_out, throttle_out);
 
-        // overwrite forward command if it is sent by pilot
+        // overwrite forward and throttle command if it is sent by pilot
         if (fabsf(channel_forward->norm_input()) > inp_threshold)
             forward_out = channel_forward->norm_input();
+
+        if (fabsf(channel_throttle->norm_input() - 0.5f) > inp_threshold)
+            throttle_out = channel_throttle->norm_input() - 0.5f;
 
         // overwrite lateral command, if there are any pilot inputs (-> hence the lateral scanning motion is stopped during pilot inputs)
         if ( pilot_in )
@@ -124,7 +127,7 @@ void Sub::md_net_tracking_run()
     // Get last user velocity direction to check for zero derivative points
     static bool lastVelocityZWasNegative = false;
 
-    if ( pilot_in ) { // Pilot input above 5%
+    if ( pilot_in || fabs(throttle_out) > 0.0f) { // Pilot input above 5% or throttle_out set by nettracking library
 
         // disable depth control
         // the throttle for hovering will be applied along inertial z-axis
@@ -160,7 +163,7 @@ void Sub::md_net_tracking_run()
     }
 
     // output pilot's translational motion commmands
-    motors.set_pilot_throttle(channel_throttle->norm_input() - 0.5f);
+    motors.set_pilot_throttle(throttle_out);
     motors.set_forward(forward_out);
     motors.set_lateral(lateral_out);
 }
