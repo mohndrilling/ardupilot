@@ -202,6 +202,10 @@ void AP_NetTracking::update_lateral_out(float &lateral_out, bool update_target, 
             _nettr_direction *= -1.0f;
             _nettr_toggle_velocity = false;
             _pos_control.relax_optfl_controller();
+
+            // switch to Throttle state and store the current absolute opt flow y distance to track the distance that the image is traveling during throttle state
+            _state = State::Throttle;
+            _initial_opt_flow_sumy = _opt_flow_sumy;
         }
     }
     else if (_net_shape == NetShape::Tube)
@@ -292,8 +296,6 @@ void AP_NetTracking::update_throttle_out(float &throttle_out, bool update_target
 
     if (fabs(_opt_flow_sumy - _initial_opt_flow_sumy) > _opt_flow_thr_dist)
     {
-
-        gcs().send_text(MAV_SEVERITY_INFO, "Changing to Scanning");
         _state = State::Scanning;
     }
 
