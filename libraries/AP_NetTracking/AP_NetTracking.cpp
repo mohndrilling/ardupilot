@@ -309,6 +309,7 @@ void AP_NetTracking::update_throttle_out(float &throttle_out, bool update_target
 
     if (fabs(_phase_shift_sum_y - _initial_phase_shift_sumy) > _phase_shift_thr_dist)
     {
+
         _state = State::Scanning;
     }
 
@@ -323,6 +324,9 @@ void AP_NetTracking::update_phase_shift(float dt)
     _phase_shift_filt.set_cutoff_frequency(_phase_shift_cutoff_freq);
     // append negative value, because x-axes (and z-axes) of coordinate systems used in phase correlation node and ardusub are pointing in opposite directions
     _phase_shift_filt.apply(-phase_shift, dt);
+
+    _phase_shift_sum_x = _phase_shift_filt.get().x;
+    _phase_shift_sum_y = _phase_shift_filt.get().y;
 
     gcs().send_named_float("im_shift_x", _phase_shift_filt.get().x);
     gcs().send_named_float("im_shift_y", _phase_shift_filt.get().y);
