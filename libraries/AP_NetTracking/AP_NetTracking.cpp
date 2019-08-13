@@ -73,7 +73,7 @@ const AP_Param::GroupInfo AP_NetTracking::var_info[] = {
     // @Param: PH_CRR_DST
     // @DisplayName: Desired optical distance the image is supposed to travel during throttle state
     // @Description: Desired optical distance the image is supposed to travel during throttle state
-    // @Range: 10 100
+    // @Range: 10.0 600.0
     // @Increment: 1
     // @User: Advanced
     AP_GROUPINFO("PH_CRR_DST", 8, AP_NetTracking, _phase_shift_thr_dist, AP_NETTRACKING_PHASE_SHIFT_THR_DIST_DEFAULT),

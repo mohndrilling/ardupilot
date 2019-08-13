@@ -18,7 +18,7 @@
 #define AP_NETTRACKING_CTRL_VAR_DEFAULT ControlVar::ctrl_distance
 #define AP_NETTRACKING_VEL_CTRL_DEFAULT 1
 #define AP_NETTRACKING_THR_SPEED_DEFAULT 0.05f
-#define AP_NETTRACKING_PHASE_SHIFT_THR_DIST_DEFAULT 20
+#define AP_NETTRACKING_PHASE_SHIFT_THR_DIST_DEFAULT 200
 #define AP_NETTRACKING_PHASE_SHIFT_CUTOFF_FREQ_DEFAULT 0.2f
 
 class AP_NetTracking {
@@ -106,7 +106,7 @@ protected:
     AP_Int8  _velocity_ctrl;
     AP_Float _phase_shift_cutoff_freq;
     AP_Float _throttle_speed;
-    AP_Int32 _phase_shift_thr_dist;
+    AP_Float _phase_shift_thr_dist;
 
     uint32_t _last_stereo_update_ms = 0;
     uint32_t _last_mesh_data_update_ms = 0;
