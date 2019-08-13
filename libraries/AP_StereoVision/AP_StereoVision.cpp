@@ -82,30 +82,58 @@ void AP_StereoVision::update()
         return;
     }
 
-    if (_state.last_processed_sensor_update_ms == _state.last_sensor_update_ms) {
-        // This reading has already been processed
-        return;
+    // stereo vision
+    if (_stv_state.last_processed_sensor_update_ms != _stv_state.last_update_ms) {
+        _stv_state.last_processed_sensor_update_ms = _stv_state.last_update_ms;
     }
 
-    _state.last_processed_sensor_update_ms = _state.last_sensor_update_ms;
+    // net inspection
+    if (_ni_state.last_processed_sensor_update_ms != _ni_state.last_update_ms) {
+        _ni_state.last_processed_sensor_update_ms = _ni_state.last_update_ms;
+    }
 
-//    gcs().send_text(MAV_SEVERITY_INFO, "[STEREO_VISION] vx: %5.3f  vy: %5.3f dist: %5.3f", (double)_state.opt_flow[0], (double) _state.opt_flow[1], (double) _state.distance);
+    // phase correlation
+    if (_pc_state.last_processed_sensor_update_ms != _pc_state.last_update_ms) {
+        _pc_state.last_processed_sensor_update_ms = _pc_state.last_update_ms;
+    }
 
 }
 
-// return true if sensor is basically healthy (we are receiving data)
-bool AP_StereoVision::healthy() const
+// return true if stereo vision input is basically healthy (we are receiving data)
+bool AP_StereoVision::stereo_vision_healthy() const
 {
     if (!enabled()) {
         return false;
     }
 
     // healthy if we have received sensor messages within the past 300ms
-    return ((AP_HAL::millis() - _state.last_sensor_update_ms) < AP_STEREOVISION_TIMEOUT_MS);
+    return ((AP_HAL::millis() - _stv_state.last_update_ms) < AP_STEREOVISION_TIMEOUT_MS);
 }
 
-// consume VISION_POSITION_DELTA MAVLink message
-void AP_StereoVision::handle_msg(const mavlink_message_t *msg)
+// return true if net inspection is basically healthy (we are receiving data)
+bool AP_StereoVision::net_inspection_healthy() const
+{
+    if (!enabled()) {
+        return false;
+    }
+
+    // healthy if we have received sensor messages within the past 300ms
+    return ((AP_HAL::millis() - _ni_state.last_update_ms) < AP_STEREOVISION_TIMEOUT_MS);
+}
+
+// return true if phase correlation is basically healthy (we are receiving data)
+bool AP_StereoVision::phase_corr_healthy() const
+{
+    if (!enabled()) {
+        return false;
+    }
+
+    // healthy if we have received sensor messages within the past 300ms
+    return ((AP_HAL::millis() - _pc_state.last_update_ms) < AP_STEREOVISION_TIMEOUT_MS);
+}
+
+// consume STEREO_VISION_ODOM MAVLink message
+void AP_StereoVision::handle_stereo_vision_msg(const mavlink_message_t *msg)
 {
     // exit immediately if not enabled
     if (!enabled()) {
@@ -114,7 +142,35 @@ void AP_StereoVision::handle_msg(const mavlink_message_t *msg)
 
     // call backend
     if (_driver != nullptr) {
-        _driver->handle_msg(msg);
+        _driver->handle_stereo_vision_msg(msg);
+    }
+}
+
+// consume NET_INSPECTION MAVLink message
+void AP_StereoVision::handle_net_inspection_msg(const mavlink_message_t *msg)
+{
+    // exit immediately if not enabled
+    if (!enabled()) {
+        return;
+    }
+
+    // call backend
+    if (_driver != nullptr) {
+        _driver->handle_net_inspection_msg(msg);
+    }
+}
+
+// consume PHASE_CORR MAVLink message
+void AP_StereoVision::handle_phase_correlation_msg(const mavlink_message_t *msg)
+{
+    // exit immediately if not enabled
+    if (!enabled()) {
+        return;
+    }
+
+    // call backend
+    if (_driver != nullptr) {
+        _driver->handle_phase_correlation_msg(msg);
     }
 }
 

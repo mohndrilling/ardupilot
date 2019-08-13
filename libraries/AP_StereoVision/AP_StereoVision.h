@@ -43,18 +43,31 @@ public:
     };
 
     // The AP_StereoVisionState structure is filled in by the backend driver
-    struct AP_StereoVisionState {
-        Vector2f opt_flow;       // linear velocity with regard to body frame
+    struct StereoVisionState {
         float distance;    // distance to nearest poincloud in front
         float delta_pitch; // difference pitch angle (centi-degrees) between the vehicle's heading and the targeted object plane
         float delta_yaw; // difference yaw angle (centi-degrees) between the vehicle's heading and the targeted object plane
-        uint32_t mesh_count; // amount of currently visible net meshes
-        float mesh_distr; // proportion of meshes (0...1) on left image side
         uint64_t time_delta_usec;   // time delta (in usec) between previous and most recent update
         float confidence;           // confidence expressed as a value from 0 (no confidence) to 100 (very confident)
-        uint32_t last_sensor_update_ms;    // system time (in milliseconds) of last update from sensor
+        uint32_t last_update_ms;    // system time (in milliseconds) of last update
         uint32_t last_processed_sensor_update_ms; // timestamp of last sensor update that was processed
 
+    };
+
+    struct NetInspectionState {
+        uint64_t time_delta_usec; // time delta (in usec) between previous and most recent update
+        uint32_t last_update_ms;  // system time (in milliseconds) of last update from net inspector
+        uint32_t last_processed_sensor_update_ms; // timestamp of last net inspection update that was processed
+        float mesh_distribution; // ratio of net meshes on left image side
+        float mesh_count; // absolute amount of net meshes
+    };
+
+    struct PhaseCorrState {
+        uint64_t time_delta_usec; // time delta (in usec) between previous and most recent update
+        uint32_t last_update_ms;  // system time (in milliseconds) of last update from net inspector
+        uint32_t last_processed_sensor_update_ms; // timestamp of last net inspection update that was processed
+        Vector2f phase_shift; // translational shift between current and previous image
+        Vector2f phase_shift_sum; // accumulated shift between current and first received image
     };
 
     // detect and initialise any sensors
@@ -68,26 +81,40 @@ public:
     bool enabled() const;
 
     // return true if sensor is basically healthy (we are receiving data)
-    bool healthy() const;
+    bool stereo_vision_healthy() const;
+    bool net_inspection_healthy() const;
+    bool phase_corr_healthy() const;
 
     // return a 3D vector defining the position offset of the camera in meters relative to the body frame origin
     const Vector3f &get_pos_offset(void) const { return _pos_offset; }
 
     // consume data from MAVLink messages
-    void handle_msg(const mavlink_message_t *msg);
+    void handle_stereo_vision_msg(const mavlink_message_t *msg);
+    void handle_net_inspection_msg(const mavlink_message_t *msg);
+    void handle_phase_correlation_msg(const mavlink_message_t *msg);
 
     static const struct AP_Param::GroupInfo var_info[];
 
     // state accessors
-    const Vector2f &get_opt_flow() const { return _state.opt_flow; }
-    const float &get_distance() const { return _state.distance; }
-    const float &get_delta_pitch() const { return _state.delta_pitch; }
-    const float &get_delta_yaw() const { return _state.delta_yaw; }
-    const uint32_t &get_mesh_count() const { return _state.mesh_count; }
-    const float &get_mesh_distr() const { return _state.mesh_distr; }
-    const uint64_t &get_time_delta_usec() const { return _state.time_delta_usec; }
-    const float &get_confidence() const { return _state.confidence; }
-    const uint32_t &get_last_update_ms() const { return _state.last_sensor_update_ms; }
+    // Stereo Vision
+    const float &get_distance() const { return _stv_state.distance; }
+    const float &get_delta_pitch() const { return _stv_state.delta_pitch; }
+    const float &get_delta_yaw() const { return _stv_state.delta_yaw; }
+    const float &get_stv_confidence() const { return _stv_state.confidence; }
+    const uint64_t &get_stv_time_delta_usec() const { return _stv_state.time_delta_usec; }
+    const uint32_t &get_last_stv_update_ms() const { return _stv_state.last_update_ms; }
+
+    // net inspection
+    const uint32_t &get_mesh_count() const { return _ni_state.mesh_count; }
+    const float &get_mesh_distr() const { return _ni_state.mesh_distribution; }
+    const uint64_t &get_ni_time_delta_usec() const { return _ni_state.time_delta_usec; }
+    const uint32_t &get_last_ni_update_ms() const { return _ni_state.last_update_ms; }
+
+    //phase correlation
+    const Vector2f &get_cur_transl_shift() const { return _pc_state.phase_shift; }
+    const Vector2f &get_acc_transl_shift() const { return _pc_state.phase_shift_sum; }
+    const uint64_t &get_pc_time_delta_usec() const { return _pc_state.time_delta_usec; }
+    const uint32_t &get_last_pc_update_ms() const { return _pc_state.last_update_ms; }
 
 private:
 
@@ -105,7 +132,9 @@ private:
     AP_StereoVision_Backend *_driver;
 
     // state of backend
-    AP_StereoVisionState _state;
+    StereoVisionState _stv_state;
+    NetInspectionState _ni_state;
+    PhaseCorrState _pc_state;
 };
 
 namespace AP {

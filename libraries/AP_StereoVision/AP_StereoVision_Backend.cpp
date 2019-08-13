@@ -25,15 +25,31 @@ AP_StereoVision_Backend::AP_StereoVision_Backend(AP_StereoVision &frontend) :
 }
 
 // set deltas (used by backend to update state)
-void AP_StereoVision_Backend::set_stereovision_odometry(const Vector2f &opt_flow, float distance, float delta_pitch, float delta_yaw, uint32_t mesh_count, float mesh_distr, uint64_t time_delta_usec, float confidence)
+void AP_StereoVision_Backend::set_stereovision_odometry(float distance, float delta_pitch, float delta_yaw, uint64_t time_delta_usec, float confidence)
 {
-    _frontend._state.opt_flow = opt_flow;
-    _frontend._state.distance = distance;
-    _frontend._state.delta_pitch = RadiansToCentiDegrees(delta_pitch);
-    _frontend._state.delta_yaw = RadiansToCentiDegrees(delta_yaw);
-    _frontend._state.mesh_count = mesh_count;
-    _frontend._state.mesh_distr = mesh_distr;
-    _frontend._state.time_delta_usec = time_delta_usec;
-    _frontend._state.confidence = confidence;
-    _frontend._state.last_sensor_update_ms = AP_HAL::millis();
+    _frontend._stv_state.distance = distance;
+    _frontend._stv_state.delta_pitch = RadiansToCentiDegrees(delta_pitch);
+    _frontend._stv_state.delta_yaw = RadiansToCentiDegrees(delta_yaw);
+    _frontend._stv_state.time_delta_usec = time_delta_usec;
+    _frontend._stv_state.confidence = confidence;
+    _frontend._stv_state.last_update_ms = AP_HAL::millis();
+}
+
+void AP_StereoVision_Backend::set_net_inspection_data(uint32_t mesh_count, float mesh_distribution, uint64_t time_delta_usec)
+{
+    _frontend._ni_state.mesh_count = mesh_count;
+    _frontend._ni_state.mesh_distribution = mesh_distribution;
+    _frontend._ni_state.time_delta_usec = time_delta_usec;
+    _frontend._ni_state.last_update_ms = AP_HAL::millis();
+}
+
+void AP_StereoVision_Backend::set_phase_corr_data(float phase_shift_x, float phase_shift_y, float phase_shift_sum_x, float phase_shift_sum_y, uint64_t time_delta_usec)
+{
+    Vector2f phase_shift(phase_shift_x, phase_shift_y);
+    Vector2f phase_shift_sum(phase_shift_sum_x, phase_shift_sum_y);
+
+    _frontend._pc_state.phase_shift = phase_shift;
+    _frontend._pc_state.phase_shift_sum = phase_shift_sum;
+    _frontend._pc_state.time_delta_usec = time_delta_usec;
+    _frontend._pc_state.last_update_ms = AP_HAL::millis();
 }

@@ -25,14 +25,32 @@ AP_StereoVision_MAV::AP_StereoVision_MAV(AP_StereoVision &frontend) :
 {
 }
 
-// consume VISIOIN_POSITION_DELTA MAVLink message
-void AP_StereoVision_MAV::handle_msg(const mavlink_message_t *msg)
+// consume STEREO_VISION_ODOM MAVLink message
+void AP_StereoVision_MAV::handle_stereo_vision_msg(const mavlink_message_t *msg)
 {
     // decode message
     mavlink_stereo_vision_odom_t packet;
     mavlink_msg_stereo_vision_odom_decode(msg, &packet);
 
-    const Vector2f opt_flow(packet.opt_flow[0], packet.opt_flow[1]);
+    set_stereovision_odometry(packet.distance, packet.delta_pitch, packet.delta_yaw, packet.time_delta_usec, packet.confidence);
+}
 
-    set_stereovision_odometry(opt_flow, packet.distance, packet.delta_pitch, packet.delta_yaw, packet.mesh_count, packet.mesh_distr, packet.time_delta_usec, packet.confidence);
+// consume STEREO_VISION_ODOM MAVLink message
+void AP_StereoVision_MAV::handle_net_inspection_msg(const mavlink_message_t *msg)
+{
+    // decode message
+    mavlink_net_inspection_t packet;
+    mavlink_msg_net_inspection_decode(msg, &packet);
+
+    set_net_inspection_data(packet.mesh_count, packet.mesh_distribution, packet.time_delta_usec);
+}
+
+// consume STEREO_VISION_ODOM MAVLink message
+void AP_StereoVision_MAV::handle_phase_correlation_msg(const mavlink_message_t *msg)
+{
+    // decode message
+    mavlink_phase_corr_t packet;
+    mavlink_msg_phase_corr_decode(msg, &packet);
+
+    set_phase_corr_data(packet.phase_shift_x, packet.phase_shift_y, packet.phase_shift_sum_x, packet.phase_shift_sum_y, packet.time_delta_usec);
 }

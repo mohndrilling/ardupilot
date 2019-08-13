@@ -88,7 +88,27 @@ void GCS_MAVLINK_Sub::handle_stereovision_odom(const mavlink_message_t *msg)
     if (stereovision == nullptr) {
         return;
     }
-    stereovision->handle_msg(msg);
+    stereovision->handle_stereo_vision_msg(msg);
+}
+
+// handle stereo vision messages
+void GCS_MAVLINK_Sub::handle_net_inspection_msg(const mavlink_message_t *msg)
+{
+    AP_StereoVision *stereovision = AP::stereovision();
+    if (stereovision == nullptr) {
+        return;
+    }
+    stereovision->handle_net_inspection_msg(msg);
+}
+
+// handle stereo vision messages
+void GCS_MAVLINK_Sub::handle_phase_corr_msg(const mavlink_message_t *msg)
+{
+    AP_StereoVision *stereovision = AP::stereovision();
+    if (stereovision == nullptr) {
+        return;
+    }
+    stereovision->handle_phase_correlation_msg(msg);
 }
 
 void GCS_MAVLINK_Sub::send_nav_controller_output() const
@@ -795,6 +815,14 @@ void GCS_MAVLINK_Sub::handleMessage(mavlink_message_t* msg)
 
     case MAVLINK_MSG_ID_STEREO_VISION_ODOM:
         handle_stereovision_odom(msg);
+        break;
+
+    case MAVLINK_MSG_ID_NET_INSPECTION:
+        handle_net_inspection_msg(msg);
+        break;
+
+    case MAVLINK_MSG_ID_PHASE_CORR:
+        handle_phase_corr_msg(msg);
         break;
 
     default:

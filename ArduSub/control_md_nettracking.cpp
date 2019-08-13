@@ -65,7 +65,7 @@ void Sub::md_net_tracking_run()
 
     ///////////// Attitude and Distance Control ////////////////////////
     // if stereovision keeps receiving heading and distance information from stereo camera data via mavlink, run distance and attitude controllers
-    if (stereovision.healthy())
+    if (stereovision.stereo_vision_healthy())
     {
         nettracking.perform_net_tracking(forward_out, lateral_out, throttle_out);
 

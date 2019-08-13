@@ -18,8 +18,8 @@
 #define AP_NETTRACKING_CTRL_VAR_DEFAULT ControlVar::ctrl_distance
 #define AP_NETTRACKING_VEL_CTRL_DEFAULT 1
 #define AP_NETTRACKING_THR_SPEED_DEFAULT 0.05f
-#define AP_NETTRACKING_OPTFL_THR_DIST_DEFAULT 20
-#define AP_NETTRACKING_OPT_FLOW_CUTOFF_FREQ_DEFAULT 0.2f
+#define AP_NETTRACKING_PHASE_SHIFT_THR_DIST_DEFAULT 20
+#define AP_NETTRACKING_PHASE_SHIFT_CUTOFF_FREQ_DEFAULT 0.2f
 
 class AP_NetTracking {
 public:
@@ -34,7 +34,7 @@ public:
                     _stereo_vision(stereo_vision),
                     _state(State::Scanning),
                     _perform_att_ctrl(false),
-                    _opt_flow_filt(AP_NETTRACKING_OPT_FLOW_CUTOFF_FREQ_DEFAULT)
+                    _phase_shift_filt(AP_NETTRACKING_PHASE_SHIFT_CUTOFF_FREQ_DEFAULT)
     {
         AP_Param::setup_object_defaults(this, var_info);
     }
@@ -56,7 +56,7 @@ public:
 
 protected:
 
-    // calculate lateral velocity (either static or based on optical flow)
+    // calculate lateral velocity (either static or based on phase shift measurement)
     void update_lateral_out(float &lateral_out, bool update_target, float dt);
 
     // calculate forward velocity (either distance or mesh count controller)
@@ -68,8 +68,8 @@ protected:
     // throttles the vehicle down by constant throttle
     void update_throttle_out(float &throttle_out, bool update_target, float dt);
 
-    // updates the optical flow low pass filter by new measurement values and accumulates the absolute distance, the opt flow has travelled
-    void update_optical_flow(float dt);
+    // updates the phase shift low pass filter by new measurement values and accumulates the absolute distance, the image has shifted
+    void update_phase_shift(float dt);
 
     // References to external libraries
     const AP_AHRS_View&         _ahrs;
@@ -104,29 +104,32 @@ protected:
     AP_Int8  _control_var;
     AP_Float _tracking_velocity;
     AP_Int8  _velocity_ctrl;
-    AP_Float _opt_flow_cutoff_freq;
+    AP_Float _phase_shift_cutoff_freq;
     AP_Float _throttle_speed;
-    AP_Int32 _opt_flow_thr_dist;
+    AP_Int32 _phase_shift_thr_dist;
 
     uint32_t _last_stereo_update_ms = 0;
+    uint32_t _last_mesh_data_update_ms = 0;
+    uint32_t _last_phase_corr_update_ms = 0;
+
     float _nettr_velocity;
     bool _nettr_toggle_velocity = false;
     float _nettr_direction = 1.0f;
 
-    float _opt_flow_sumx = 0;
-    float _opt_flow_sumy = 0;
+    float _phase_shift_sum_x;
+    float _phase_shift_sum_y;
 
     // stores the initial yaw value at start of net tracking. ROV should switch directions of lateral movements after 360 degrees scan
     float _initial_yaw;    
 
-    // stores the absolute distance, the optical flow has travelled along y-axis. This is stored when switching to throttle-state to track the distance that the image is "moving upwards" during throttling
-    float _initial_opt_flow_sumy;
+    // stores the absolute distance, the image has travelled along y-axis. This is stored when switching to throttle-state to track the distance that the image is "moving upwards" during throttling
+    float _initial_phase_shift_sumy;
 
     // if distance error is small enough, use the stereovision heading data to always orientate the vehicle normal to the faced object surface
     bool _perform_att_ctrl;
 
     // filter
-    LowPassFilterVector2f _opt_flow_filt;  // low pass filtering of optical flow input
+    LowPassFilterVector2f _phase_shift_filt;  // low pass filtering of phase shift input
 
     // net tracking State
     State _state;

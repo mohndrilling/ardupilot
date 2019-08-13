@@ -24,13 +24,19 @@ public:
     // constructor. This incorporates initialisation as well.
     AP_StereoVision_Backend(AP_StereoVision &frontend);
 
-    // consume VISION_POSITION_DELTA MAVLink message
-    virtual void handle_msg(const mavlink_message_t *msg) {};
+    // mavlink message callbacks
+    virtual void handle_stereo_vision_msg(const mavlink_message_t *msg) {};
+    virtual void handle_net_inspection_msg(const mavlink_message_t *msg) {};
+    virtual void handle_phase_correlation_msg(const mavlink_message_t *msg) {};
 
 protected:
 
-    // set deltas (used by backend to update state)
-    void set_stereovision_odometry(const Vector2f &opt_flow, float distance, float delta_pitch, float delta_yaw, uint32_t mesh_count, float mesh_distr, uint64_t time_delta_usec, float confidence);
+    // fill the data structs
+    void set_stereovision_odometry(float distance, float delta_pitch, float delta_yaw, uint64_t time_delta_usec, float confidence);
+
+    void set_net_inspection_data(uint32_t mesh_count, float mesh_distribution, uint64_t time_delta_usec);
+
+    void set_phase_corr_data(float phase_shift_x, float phase_shift_y, float phase_shift_sum_x, float phase_shift_sum_y, uint64_t time_delta_usec);
 
 private:
 
