@@ -25,10 +25,12 @@ class AP_NetTracking {
 public:
 
     AP_NetTracking( AP_AHRS_View &ahrs,
+                    AP_InertialNav &inav,
                     AC_AttitudeControl_Sub& attitude_control,
                     AC_PosControl_Sub& pos_control,
                     AP_StereoVision& stereo_vision) :
                     _ahrs(ahrs),
+                    _inav(inav),
                     _attitude_control(attitude_control),
                     _pos_control(pos_control),
                     _stereo_vision(stereo_vision),
@@ -74,6 +76,7 @@ protected:
     // References to external libraries
     const AP_AHRS_View&         _ahrs;
     AC_AttitudeControl_Sub&     _attitude_control;
+    AP_InertialNav&             _inav;
     AC_PosControl_Sub&          _pos_control;
     AP_StereoVision&            _stereo_vision;
 
@@ -94,7 +97,8 @@ protected:
     {
       Scanning,
       Throttle,
-      Pause
+      Pause,
+      ReturnHome
     };
 
     // Parameters
@@ -119,8 +123,14 @@ protected:
     float _phase_shift_sum_x;
     float _phase_shift_sum_y;
 
-    // stores the initial yaw value at start of net tracking. ROV should switch directions of lateral movements after 360 degrees scan
+    // stores the accumulated yaw value at start of each new 360 degrees loop. ROV should switch directions of lateral movements after 360 degrees scan
     float _initial_yaw;    
+
+    // the heading (yaw angle in radians) at start of net tracking
+    float _home_yaw;
+
+    // the altitude at start of net tracking
+    float _home_altitude;
 
     // stores the absolute distance, the image has travelled along y-axis. This is stored when switching to throttle-state to track the distance that the image is "moving upwards" during throttling
     float _initial_phase_shift_sumy;

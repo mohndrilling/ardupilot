@@ -90,6 +90,16 @@ void AP_NetTracking::init()
 {
     _initial_yaw = _attitude_control.get_accumulated_yaw();
 
+    // retrieve current yaw angle (is there a more straight forward way?)
+    float current_roll, current_pitch, current_yaw;
+    Quaternion vehicle_attitude;
+    _ahrs.get_quat_body_to_ned(vehicle_attitude);
+    vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
+
+    // home position (defined by heading and altitude for now)
+    _home_yaw = current_yaw;
+    _home_altitude = _inav.get_altitude();
+
     // update time stamps
     _last_stereo_update_ms = _stereo_vision.get_last_stv_update_ms();
     _last_mesh_data_update_ms = _stereo_vision.get_last_ni_update_ms();
@@ -157,6 +167,38 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
             update_heading_control(stv_updated, stv_dt);
             lateral_out = 0.0f;
             update_throttle_out(throttle_out, pc_updated, pc_dt);
+            break;
+
+        case State::ReturnHome:
+            // continue scanning
+            update_forward_out(forward_out, forward_update, forward_dt);
+
+            if (_perform_att_ctrl)
+            {
+                update_heading_control(stv_updated, stv_dt);
+                update_lateral_out(lateral_out, pc_updated, pc_dt);
+            }
+            else
+            {
+                // if the distance is too large, the vehicle is supposed to obtain the current attitude and to not move laterally
+                // call attitude controller
+                _attitude_control.input_euler_roll_pitch_yaw_accumulate(0.0f, 0.0f, 0.0f, stv_dt, false);
+
+                // no lateral movement
+                lateral_out = 0.0f;
+            }
+
+            {
+                // check termination condition
+                float current_roll, current_pitch, current_yaw;
+                Quaternion vehicle_attitude;
+                _ahrs.get_quat_body_to_ned(vehicle_attitude);
+                vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
+
+                if (fabs(_home_yaw - current_yaw) < radians(5.0f))
+                    lateral_out = 0.0f;
+            }
+
             break;
 
         default:
