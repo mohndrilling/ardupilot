@@ -184,7 +184,7 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
             throttle_out = thr_dir * _throttle_speed;
 
             // check termination condition
-            if (fabs(_inav.get_altitude() - _home_yaw) < 5.0f)
+            if (fabs(_inav.get_altitude() - _home_altitude) < 5.0f)
                 _state = State::Pause;
 
             break;
