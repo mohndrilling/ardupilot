@@ -53,25 +53,33 @@ public:
     // perform net tracking: calls attitude and pos controller to maintain orthonormal heading and distance
     void perform_net_tracking(float &forward_out, float &lateral_out, float &throttle_out);
 
+    // sets state to 'ReturnHome'
+    // in case of a closed net shape (fish farm), ROV continues scanning until initial heading reached, then throttles to initial altitude
+    // in case of plane net shape, ROV directly throttles to initial altitude
+    void set_return_home() { _state = _net_shape == NetShape::Tube ? State::ReturnToHomeHeading : State::ReturnToHomeAltitude; }
+
     // resets internal variables to default values
     void reset();
 
 protected:
 
+    // call distance controller and attitude controller to keep desired distance and heading to net plane
+    void scan(float &forward_out, float &lateral_out, float &throttle_out);
+
     // calculate lateral velocity (either static or based on phase shift measurement)
-    void update_lateral_out(float &lateral_out, bool update_target, float dt);
+    void update_lateral_out(float &lateral_out);
 
     // calculate forward velocity (either distance or mesh count controller)
-    void update_forward_out(float &forward_out, bool update_target, float dt);
+    void update_forward_out(float &forward_out);
 
     // calls the attitude controller to achieve normal heading of the ROV w.r.t. the net plane
-    void update_heading_control(bool update_target, float dt);
+    void update_heading_control();
 
     // throttles the vehicle down by constant throttle
-    void update_throttle_out(float &throttle_out, bool update_target, float dt);
+    void update_throttle_out(float &throttle_out);
 
     // updates the phase shift low pass filter by new measurement values and accumulates the absolute distance, the image has shifted
-    void update_phase_shift(float dt);
+    void update_phase_shift();
 
     // References to external libraries
     const AP_AHRS_View&         _ahrs;
@@ -98,7 +106,25 @@ protected:
       Scanning,
       Throttle,
       Pause,
-      ReturnHome
+      ReturnToHomeHeading,
+      ReturnToHomeAltitude,
+    };
+
+    // stores time difference (seconds) between each incoming message of stereovision, image shift and net inspection modules
+    // updated each loop
+    struct SensorIntervals
+    {
+        float stv_dt; // dt of stereo vision messages
+        float ni_dt;  // dt of net inspection messages
+        float pc_dt;  // dt of phase corr (image shift) messages
+    };
+
+    // stores whether each of the stereovision, image shift and net inspection modules holds new information
+    struct SensorUpdated
+    {
+        bool stv_updated; // whether stereovision module has new data
+        bool ni_updated;  // whether net inspection module has new data
+        bool pc_updated;  // whether phase corr module has new data
     };
 
     // Parameters
@@ -143,6 +169,10 @@ protected:
 
     // net tracking State
     State _state;
+
+    // sensor information
+    SensorIntervals _sensor_intervals;
+    SensorUpdated _sensor_updates;
 
 public:
 };

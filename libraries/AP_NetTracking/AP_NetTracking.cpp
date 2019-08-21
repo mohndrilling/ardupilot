@@ -104,102 +104,91 @@ void AP_NetTracking::init()
     _last_stereo_update_ms = _stereo_vision.get_last_stv_update_ms();
     _last_mesh_data_update_ms = _stereo_vision.get_last_ni_update_ms();
     _last_phase_corr_update_ms = _stereo_vision.get_last_pc_update_ms();
+
+    // set initial state
+    _state = State::Scanning;
 }
 
 void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out, float &throttle_out)
 {
     // time difference (in seconds) between two measurements from stereo vision is used to lowpass filter the data
-    float stv_dt = _stereo_vision.get_stv_time_delta_usec() / 1000000.0f; // stereo vision net tracking messages
-    float ni_dt = _stereo_vision.get_ni_time_delta_usec() / 1000000.0f; // net inspection  messages
-    float pc_dt = _stereo_vision.get_pc_time_delta_usec() / 1000000.0f; // phase correlation messages
+    _sensor_intervals.stv_dt = _stereo_vision.get_stv_time_delta_usec() / 1000000.0f; // stereo vision net tracking messages
+    _sensor_intervals.ni_dt = _stereo_vision.get_ni_time_delta_usec() / 1000000.0f; // net inspection  messages
+    _sensor_intervals.pc_dt = _stereo_vision.get_pc_time_delta_usec() / 1000000.0f; // phase correlation messages
 
-    if (stv_dt > 2.0f)
+    if (_sensor_intervals.stv_dt > 2.0f)
     {
         _attitude_control.reset_yaw_err_filter();
     }
 
     // only update target distance and attitude, if new measurement from stereo data available
-    bool stv_updated = _stereo_vision.get_last_stv_update_ms() - _last_stereo_update_ms != 0;
-    bool ni_updated = _stereo_vision.get_last_ni_update_ms() - _last_mesh_data_update_ms != 0;
-    bool pc_updated = _stereo_vision.get_last_pc_update_ms() - _last_phase_corr_update_ms != 0;
+    _sensor_updates.stv_updated = _stereo_vision.get_last_stv_update_ms() - _last_stereo_update_ms != 0;
+    _sensor_updates.ni_updated = _stereo_vision.get_last_ni_update_ms() - _last_mesh_data_update_ms != 0;
+    _sensor_updates.pc_updated = _stereo_vision.get_last_pc_update_ms() - _last_phase_corr_update_ms != 0;
 
     _last_stereo_update_ms = _stereo_vision.get_last_stv_update_ms();
     _last_mesh_data_update_ms = _stereo_vision.get_last_ni_update_ms();
     _last_phase_corr_update_ms = _stereo_vision.get_last_pc_update_ms();
 
-    //
-    bool forward_update = _control_var == ctrl_meshcount ? ni_updated : stv_updated;
-    float forward_dt = _control_var == ctrl_meshcount ? ni_dt : stv_dt;
-
     switch (_state)
     {
         case State::Pause:
-            forward_out = 0.0f;
+            // continue performing distance and heading control
+            scan(forward_out, lateral_out, throttle_out);
+
+            // no lateral moving
             lateral_out = 0.0f;
-            throttle_out = 0.0f;
-            update_heading_control(stv_updated, stv_dt);
+
             break;
 
         case State::Scanning:
-            update_forward_out(forward_out, forward_update, forward_dt);
-
-            if (_perform_att_ctrl)
-            {
-                update_heading_control(stv_updated, stv_dt);
-                update_lateral_out(lateral_out, pc_updated, pc_dt);
-            }
-            else
-            {
-                // if the distance is too large, the vehicle is supposed to obtain the current attitude and to not move laterally
-                // call attitude controller
-                _attitude_control.input_euler_roll_pitch_yaw_accumulate(0.0f, 0.0f, 0.0f, stv_dt, false);
-
-                // no lateral movement
-                lateral_out = 0.0f;
-            }
-
-            throttle_out = 0.0f;
+            scan(forward_out, lateral_out, throttle_out);
             break;
 
         case State::Throttle:
 
-            update_forward_out(forward_out, forward_update, forward_dt);
-            update_heading_control(stv_updated, stv_dt);
+            update_forward_out(forward_out);
+            update_heading_control();
             lateral_out = 0.0f;
-            update_throttle_out(throttle_out, pc_updated, pc_dt);
+            update_throttle_out(throttle_out);
             break;
 
-        case State::ReturnHome:
-            // continue scanning
-            update_forward_out(forward_out, forward_update, forward_dt);
+        case State::ReturnToHomeHeading:
+        {
+            // continue performing distance and heading control
+            scan(forward_out, lateral_out, throttle_out);
 
-            if (_perform_att_ctrl)
-            {
-                update_heading_control(stv_updated, stv_dt);
-                update_lateral_out(lateral_out, pc_updated, pc_dt);
-            }
-            else
-            {
-                // if the distance is too large, the vehicle is supposed to obtain the current attitude and to not move laterally
-                // call attitude controller
-                _attitude_control.input_euler_roll_pitch_yaw_accumulate(0.0f, 0.0f, 0.0f, stv_dt, false);
+            // check termination condition
+            float current_roll, current_pitch, current_yaw;
+            Quaternion vehicle_attitude;
+            _ahrs.get_quat_body_to_ned(vehicle_attitude);
+            vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
 
-                // no lateral movement
-                lateral_out = 0.0f;
-            }
-
-            {
-                // check termination condition
-                float current_roll, current_pitch, current_yaw;
-                Quaternion vehicle_attitude;
-                _ahrs.get_quat_body_to_ned(vehicle_attitude);
-                vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
-
-                if (fabs(_home_yaw - current_yaw) < radians(5.0f))
-                    lateral_out = 0.0f;
-            }
+            if (fabs(_home_yaw - current_yaw) < radians(5.0f))
+                _state = State::ReturnToHomeAltitude;
 
             break;
+        }
+
+        case State::ReturnToHomeAltitude:
+        {
+            // continue performing distance and heading control
+            scan(forward_out, lateral_out, throttle_out);
+
+            // overwrite lateral out
+            lateral_out = 0.0f;
+
+            // overwrite throttle
+            // constant throttling towards home altitude
+            float thr_dir = _home_altitude - _inav.get_altitude() < 0 ? -1.0f : 1.0f;
+            throttle_out = thr_dir * _throttle_speed;
+
+            // check termination condition
+            if (fabs(_inav.get_altitude() - _home_yaw) < 5.0f)
+                _state = State::Pause;
+
+            break;
+        }
 
         default:
 
@@ -209,7 +198,30 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
 
 }
 
-void AP_NetTracking::update_lateral_out(float &lateral_out, bool update_target, float dt)
+
+void AP_NetTracking::scan(float &forward_out, float &lateral_out, float &throttle_out)
+{
+    update_forward_out(forward_out);
+
+    if (_perform_att_ctrl)
+    {
+        update_heading_control();
+        update_lateral_out(lateral_out);
+    }
+    else
+    {
+        // if the distance is too large, the vehicle is supposed to obtain the current attitude and to not move laterally
+        // call attitude controller
+        _attitude_control.input_euler_roll_pitch_yaw_accumulate(0.0f, 0.0f, 0.0f, _sensor_intervals.stv_dt, false);
+
+        // no lateral movement
+        lateral_out = 0.0f;
+    }
+
+    throttle_out = 0.0f;
+}
+
+void AP_NetTracking::update_lateral_out(float &lateral_out)
 {
     // scale net tracking velocity proportional to yaw error
 //        float ls_tmp = target_yaw_error / 2000.0f;
@@ -219,8 +231,8 @@ void AP_NetTracking::update_lateral_out(float &lateral_out, bool update_target, 
 //        lateral_out = (1.0f + lat_scale_f) * _nettr_velocity / 100.0f;
 
     // update phase shift input
-    if (update_target)
-        update_phase_shift(dt);
+    if (_sensor_updates.pc_updated)
+        update_phase_shift();
 
     // update net tracking velocity
     if (_velocity_ctrl)
@@ -228,14 +240,13 @@ void AP_NetTracking::update_lateral_out(float &lateral_out, bool update_target, 
         // call controller to hold desired lateral velocity
         // interprete phase shift as optical flow by calculating derivation
         float d_optfl_x = _nettr_direction * _tracking_velocity; // factor needed to scale to reasonable optical flow setpoint
-        float optfl_x_error = d_optfl_x - _stereo_vision.get_cur_transl_shift().x / dt;
+        float optfl_x_error = d_optfl_x - _stereo_vision.get_cur_transl_shift().x / _sensor_intervals.pc_dt;
 
         // get forward command from mesh count controller
-        _pos_control.update_optfl_controller(_nettr_velocity, optfl_x_error, dt, update_target);
+        _pos_control.update_optfl_controller(_nettr_velocity, optfl_x_error, _sensor_intervals.pc_dt, _sensor_updates.pc_updated);
 
         gcs().send_named_float("lat_out", _nettr_velocity);
         gcs().send_named_float("optfl_err", optfl_x_error);
-
 
     }
     else
@@ -243,6 +254,12 @@ void AP_NetTracking::update_lateral_out(float &lateral_out, bool update_target, 
         _nettr_velocity = _nettr_direction * _tracking_velocity;
     }
 
+    // scale to lateral_out command
+    lateral_out = _nettr_velocity / 250.0f;
+
+    // only perform following net edge detection/ loop detection, if we are in Scanning state
+    if (_state != State::Scanning)
+        return;
 
     // if the net shape equals an open plane, perform net edge detection based on the mesh distribution on the current image
     // if net edge detected, reverse the lateral output velocity
@@ -281,12 +298,14 @@ void AP_NetTracking::update_lateral_out(float &lateral_out, bool update_target, 
             _initial_phase_shift_sumy = _phase_shift_sum_y;
         }
     }
-
-    lateral_out = _nettr_velocity / 250.0f;
 }
 
-void AP_NetTracking::update_forward_out(float &forward_out, bool update_target, float dt)
-{
+void AP_NetTracking::update_forward_out(float &forward_out)
+{    
+
+    bool update_target = _control_var == ctrl_meshcount ? _sensor_updates.ni_updated : _sensor_updates.stv_updated;
+    float dt = _control_var == ctrl_meshcount ? _sensor_intervals.ni_dt : _sensor_intervals.stv_dt;
+
     if (_control_var == ctrl_meshcount)
     {
         // retrieve amount of currently visible net meshes
@@ -320,7 +339,7 @@ void AP_NetTracking::update_forward_out(float &forward_out, bool update_target, 
     }
 }
 
-void AP_NetTracking::update_heading_control(bool update_target, float dt)
+void AP_NetTracking::update_heading_control()
 {
     // no roll desired
     float target_roll = 0.0f;
@@ -336,28 +355,27 @@ void AP_NetTracking::update_heading_control(bool update_target, float dt)
     // only change pitch when changing altitude
 //        target_pitch_error = fabsf(channel_throttle->norm_input()-0.5f) > 0.05f ? target_pitch_error : 0.0f;
 
-    // the target values will be ignored, if no new stereo vision data received (update_target = false)
+    // the target values will be ignored, if no new stereo vision data received (_sensor_updates.stv_updated = false)
     // this will update the target attitude corresponding to the current errors and trigger the attitude controller
-    _attitude_control.input_euler_roll_pitch_yaw_accumulate(target_roll, target_pitch_error, target_yaw_error, dt, update_target);
+    _attitude_control.input_euler_roll_pitch_yaw_accumulate(target_roll, target_pitch_error, target_yaw_error, _sensor_intervals.stv_dt, _sensor_updates.stv_updated);
 }
 
-void AP_NetTracking::update_throttle_out(float &throttle_out, bool update_target, float dt)
+void AP_NetTracking::update_throttle_out(float &throttle_out)
 {
     // constantly moving downwards
     throttle_out = - _throttle_speed;
 
-    if (update_target)
-        update_phase_shift(dt);
+    if (_sensor_updates.stv_updated)
+        update_phase_shift();
 
     if (fabs(_phase_shift_sum_y - _initial_phase_shift_sumy) > _phase_shift_thr_dist)
     {
-
         _state = State::Scanning;
     }
 
 }
 
-void AP_NetTracking::update_phase_shift(float dt)
+void AP_NetTracking::update_phase_shift()
 {
     // update phase_shift input
     Vector2f phase_shift = _stereo_vision.get_acc_transl_shift();
@@ -365,7 +383,7 @@ void AP_NetTracking::update_phase_shift(float dt)
     // lowpass filter
     _phase_shift_filt.set_cutoff_frequency(_phase_shift_cutoff_freq);
     // append negative value, because x-axes (and z-axes) of coordinate systems used in phase correlation node and ardusub are pointing in opposite directions
-    _phase_shift_filt.apply(-phase_shift, dt);
+    _phase_shift_filt.apply(-phase_shift, _sensor_intervals.stv_dt);
 
     _phase_shift_sum_x = _phase_shift_filt.get().x;
     _phase_shift_sum_y = _phase_shift_filt.get().y;

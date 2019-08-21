@@ -511,6 +511,12 @@ MAV_RESULT GCS_MAVLINK_Sub::handle_command_long_packet(const mavlink_command_lon
         }
         return MAV_RESULT_ACCEPTED;
 
+    case MAV_CMD_NAV_RETURN_TO_LAUNCH:
+        if (sub.control_mode == MD_NET_TRACKING) {
+            sub.nettracking.set_return_home();
+        }
+        return MAV_RESULT_ACCEPTED;
+
     case MAV_CMD_CONDITION_YAW:
         // param1 : target angle [0-360]
         // param2 : speed during change [deg per second]
