@@ -59,7 +59,7 @@ public:
         uint32_t last_update_ms;  // system time (in milliseconds) of last update from net inspector
         uint32_t last_processed_sensor_update_ms; // timestamp of last net inspection update that was processed
         float mesh_distribution; // ratio of net meshes on left image side
-        float mesh_count; // absolute amount of net meshes
+        uint32_t mesh_count; // absolute amount of net meshes
     };
 
     struct PhaseCorrState {
