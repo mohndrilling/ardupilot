@@ -90,14 +90,8 @@ void AP_NetTracking::init()
 {
     _initial_yaw = _attitude_control.get_accumulated_yaw();
 
-    // retrieve current yaw angle (is there a more straight forward way?)
-    float current_roll, current_pitch, current_yaw;
-    Quaternion vehicle_attitude;
-    _ahrs.get_quat_body_to_ned(vehicle_attitude);
-    vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
-
     // home position (defined by heading and altitude for now)
-    _home_yaw = current_yaw;
+    _home_yaw = _ahrs.get_current_yaw();
     _home_altitude = _inav.get_altitude();
 
     // update time stamps
@@ -159,12 +153,9 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
             scan(forward_out, lateral_out, throttle_out);
 
             // check termination condition
-            float current_roll, current_pitch, current_yaw;
-            Quaternion vehicle_attitude;
-            _ahrs.get_quat_body_to_ned(vehicle_attitude);
-            vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
+            float current_yaw = _ahrs.get_current_yaw();
 
-            if (fabs(_home_yaw - current_yaw) < radians(5.0f))
+            if (fabs(_home_yaw - current_yaw) < radians(3.0f))
                 _state = State::ReturnToHomeAltitude;
 
             break;
@@ -289,7 +280,6 @@ void AP_NetTracking::update_lateral_out(float &lateral_out)
             gcs().send_text(MAV_SEVERITY_INFO, "Changing to Throttle");
             // toggle scanning direction
             _nettr_direction *= -1;
-            _initial_yaw = _attitude_control.get_accumulated_yaw();
 
             _attitude_control.reset_yaw_err_filter();
 
@@ -309,7 +299,7 @@ void AP_NetTracking::update_forward_out(float &forward_out)
     if (_control_var == ctrl_meshcount)
     {
         // retrieve amount of currently visible net meshes
-        float cur_mesh_cnt = _stereo_vision.get_mesh_count();
+        float cur_mesh_cnt = (float) _stereo_vision.get_mesh_count();
 
 
         // desired mesh count (control the square root of current mesh count, since total meshcount grows quadratically over the distance to the net)
@@ -370,6 +360,7 @@ void AP_NetTracking::update_throttle_out(float &throttle_out)
 
     if (fabs(_phase_shift_sum_y - _initial_phase_shift_sumy) > _phase_shift_thr_dist)
     {
+        _initial_yaw = _attitude_control.get_accumulated_yaw();
         _state = State::Scanning;
     }
 

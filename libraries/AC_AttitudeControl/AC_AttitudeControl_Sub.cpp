@@ -187,6 +187,8 @@ AC_AttitudeControl_Sub::AC_AttitudeControl_Sub(AP_AHRS_View &ahrs, const AP_Vehi
 
     _pitch_error_filter.set_cutoff_frequency(AC_ATTITUDE_CONTROL_PITCH_ERROR_CUTOFF_FREQ);
     _yaw_error_filter.set_cutoff_frequency(AC_ATTITUDE_CONTROL_YAW_ERROR_CUTOFF_FREQ);
+
+    _last_yaw = degrees(_ahrs.get_current_yaw());
 }
 
 // Update Alt_Hold angle maximum
@@ -352,14 +354,15 @@ void AC_AttitudeControl_Sub::parameter_sanity_check()
 
 void AC_AttitudeControl_Sub::tangling_monitor_update()
 {
-    float current_roll, current_pitch, current_yaw;
-    Quaternion vehicle_attitude;
-    _ahrs.get_quat_body_to_ned(vehicle_attitude);
-    vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
+    float cur_yaw_deg = degrees(_ahrs.get_current_yaw());
 
     // get difference yaw angle with regard to last measurement
     // if yaw angle jumped from 180 to -180 add 360 degrees, if yaw angle jumped from 180 to -180 subtract 360 degrees
-    float delta_yaw = degrees(current_yaw) - _yaw_accumulated;
+    float delta_yaw = cur_yaw_deg - _last_yaw;
+    _last_yaw = cur_yaw_deg;
+
+    gcs().send_named_float("cur_yaw", cur_yaw_deg);
+
     delta_yaw += (delta_yaw > 180.0f) ? -360.0f : (delta_yaw <- 180.0f) ? 360.0f : 0.0f;
 
     _yaw_accumulated += delta_yaw;

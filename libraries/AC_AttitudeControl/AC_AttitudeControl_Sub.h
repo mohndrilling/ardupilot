@@ -105,4 +105,5 @@ protected:
     bool _last_yaw_err_negative;
 
     float _yaw_accumulated; // accumulated yaw angle in degrees
+    float _last_yaw; // stores the last measured yaw angle
 };
