@@ -50,6 +50,15 @@ public:
     // return a Quaternion representing our current attitude in this view
     void get_quat_body_to_ned(Quaternion &quat) const {
         quat.from_rotation_matrix(rot_body_to_ned);
+    }    
+
+    // return the current heading in radians
+    float get_current_yaw(void) const {
+        float current_roll, current_pitch, current_yaw;
+        Quaternion q;
+        get_quat_body_to_ned(q);
+        q.to_euler(current_roll, current_pitch, current_yaw);
+        return current_yaw;
     }
 
     // apply pitch trim
