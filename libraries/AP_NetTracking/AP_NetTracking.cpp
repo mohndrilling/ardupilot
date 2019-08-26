@@ -127,8 +127,14 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
     switch (_state)
     {
         case State::Pause:
-            // continue performing distance and heading control
-            scan(forward_out, lateral_out, throttle_out);
+            // call attitude controller, just keep the current attitude
+            _attitude_control.input_euler_roll_pitch_yaw_accumulate(0.0f, 0.0f, 0.0f, _sensor_intervals.stv_dt, false);
+
+            // perform distance control
+            update_forward_out(forward_out);
+
+            // keep altitude
+            throttle_out = 0.0f;
 
             // no lateral moving
             lateral_out = 0.0f;
