@@ -192,6 +192,8 @@ public:
         k_param_cam_tilt_center, // deprecated
         k_param_frame_configuration,
         k_param_control_frame, // with regard to which coordinate frame the pilot commands are interpreted to
+        k_param_forward_filt,
+        k_param_lateral_filt,
 
         // Acro Mode parameters
         k_param_acro_yaw_p = 220, // Used in all modes for get_pilot_desired_yaw_rate
@@ -224,6 +226,8 @@ public:
     AP_Int16        sysid_my_gcs;
 
     AP_Float        throttle_filt;
+    AP_Float        forward_filt;
+    AP_Float        lateral_filt;
 
 #if RANGEFINDER_ENABLED == ENABLED
     AP_Float        rangefinder_gain;

@@ -256,6 +256,18 @@
 # define THR_DZ_DEFAULT         100             // the deadzone above and below mid throttle while in althold or loiter
 #endif
 
+#ifndef THR_HZ_DEFAULT
+# define THR_HZ_DEFAULT         2.0             // default cutoff frequency for throttle filter
+#endif
+
+#ifndef FORW_HZ_DEFAULT
+# define FORW_HZ_DEFAULT         0.8             // default cutoff frequency for forward filter
+#endif
+
+#ifndef LAT_HZ_DEFAULT
+# define LAT_HZ_DEFAULT         0.8             // default cutoff frequency for lateral filter
+#endif
+
 // default maximum vertical velocity and acceleration the pilot may request
 #ifndef PILOT_VELZ_MAX
 # define PILOT_VELZ_MAX    500     // maximum vertical velocity in cm/s

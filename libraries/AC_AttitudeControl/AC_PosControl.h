@@ -34,7 +34,9 @@
 #define POSCONTROL_ACTIVE_TIMEOUT_US            200000  // position controller is considered active if it has been called within the past 0.2 seconds
 
 #define POSCONTROL_VEL_ERROR_CUTOFF_FREQ        4.0f    // low-pass filter on velocity error (unit: hz)
-#define POSCONTROL_THROTTLE_CUTOFF_FREQ         2.0f    // low-pass filter on accel error (unit: hz)
+#define POSCONTROL_THROTTLE_CUTOFF_FREQ         2.0f    // low-pass filter on throttle output (unit: hz)
+#define POSCONTROL_FORWARD_CUTOFF_FREQ          4.0f    // low-pass filter on forward output (unit: hz)
+#define POSCONTROL_LATERAL_CUTOFF_FREQ          4.0f    // low-pass filter on lateral output (unit: hz)
 #define POSCONTROL_ACCEL_FILTER_HZ              2.0f    // low-pass filter on acceleration (unit: hz)
 #define POSCONTROL_JERK_RATIO                   1.0f    // Defines the time it takes to reach the requested acceleration
 
@@ -46,7 +48,7 @@ public:
 
     /// Constructor
     AC_PosControl(const AP_AHRS_View& ahrs, const AP_InertialNav& inav,
-                  const AP_Motors& motors, AC_AttitudeControl& attitude_control);
+                  AP_Motors& motors, AC_AttitudeControl& attitude_control);
 
     ///
     /// initialisation functions
@@ -370,7 +372,7 @@ protected:
     // references to inertial nav and ahrs libraries
     const AP_AHRS_View &        _ahrs;
     const AP_InertialNav&       _inav;
-    const AP_Motors&            _motors;
+    AP_Motors&                  _motors;
     AC_AttitudeControl&         _attitude_control;
 
     // parameters

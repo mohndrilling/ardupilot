@@ -32,7 +32,7 @@
 class AC_PosControl_Sub : public AC_PosControl {
 public:
     AC_PosControl_Sub(const AP_AHRS_View & ahrs, const AP_InertialNav& inav,
-                      const AP_Motors& motors, AC_AttitudeControl& attitude_control);
+                      AP_Motors& motors, AC_AttitudeControl& attitude_control);
 
     /// set_alt_max - sets maximum altitude above the ekf origin in cm
     ///   only enforced when set_alt_target_from_climb_rate is used
