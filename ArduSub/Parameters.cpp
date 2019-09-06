@@ -70,7 +70,25 @@ const AP_Param::Info Sub::var_info[] = {
     // @Units: Hz
     // @Range: 0 10
     // @Increment: .5
-    GSCALAR(throttle_filt,  "PILOT_THR_FILT",     0),
+    GSCALAR(throttle_filt,  "PILOT_THR_FILT",     THR_HZ_DEFAULT),
+
+    // @Param: PILOT_FORW_FILT
+    // @DisplayName: Forward filter cutoff
+    // @Description: Forward filter cutoff (Hz) - active whenever forward controllers are inactive - 0 to disable
+    // @User: Advanced
+    // @Units: Hz
+    // @Range: 0 10
+    // @Increment: .5
+    GSCALAR(forward_filt,  "PILOT_FORW_FILT",     FORW_HZ_DEFAULT),
+
+    // @Param: PILOT_LAT_FILT
+    // @DisplayName: Lateral filter cutoff
+    // @Description: Lateral filter cutoff (Hz) - active whenever lateral controllers are inactive - 0 to disable
+    // @User: Advanced
+    // @Units: Hz
+    // @Range: 0 10
+    // @Increment: .5
+    GSCALAR(lateral_filt,  "PILOT_LAT_FILT",     LAT_HZ_DEFAULT),
 
     // @Group: SERIAL
     // @Path: ../libraries/AP_SerialManager/AP_SerialManager.cpp

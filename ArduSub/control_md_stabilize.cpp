@@ -43,6 +43,10 @@ void Sub::md_stabilize_run()
     // output default hovering throttle
     attitude_control.set_throttle_out(motors.get_throttle_hover(), false, g.throttle_filt);
 
+    // update cut off frequencies for translational input filters
+    motors.set_forward_filter_cutoff(g.forward_filt);
+    motors.set_lateral_filter_cutoff(g.lateral_filt);
+
     //control_in is range -1000-1000
     //radio_in is raw pwm value
     motors.set_pilot_throttle(channel_throttle->norm_input() - 0.5f);

@@ -135,6 +135,10 @@ void Sub::md_net_tracking_run()
         // see update_control_frame in motors.cpp and output_armed_stabilizing_vectored_6dof() in Motors6DOF.cpp
         attitude_control.set_throttle_out(motors.get_throttle_hover(), false, g.throttle_filt);
 
+        // update cut off frequencies for translational input filters
+        motors.set_forward_filter_cutoff(g.forward_filt);
+        motors.set_lateral_filter_cutoff(g.lateral_filt);
+
         // reset z targets to current values
         pos_control.relax_alt_hold_controllers();
         engageStopZ = true;
