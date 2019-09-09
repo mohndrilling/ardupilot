@@ -361,8 +361,6 @@ void AC_AttitudeControl_Sub::tangling_monitor_update()
     float delta_yaw = cur_yaw_deg - _last_yaw;
     _last_yaw = cur_yaw_deg;
 
-    gcs().send_named_float("cur_yaw", cur_yaw_deg);
-
     delta_yaw += (delta_yaw > 180.0f) ? -360.0f : (delta_yaw <- 180.0f) ? 360.0f : 0.0f;
 
     _yaw_accumulated += delta_yaw;
