@@ -94,6 +94,8 @@ public:
     void                set_throttle(float throttle_in) { _throttle_in = throttle_in; };   // range 0 ~ 1
     void                set_throttle_avg_max(float throttle_avg_max) { _throttle_avg_max = constrain_float(throttle_avg_max, 0.0f, 1.0f); };   // range 0 ~ 1
     void                set_throttle_filter_cutoff(float filt_hz) { _throttle_filter.set_cutoff_frequency(filt_hz); }
+    void                set_pilot_throttle(float pilot_throttle_in) { _pilot_throttle_in = pilot_throttle_in; }
+    void                set_pilot_throttle_filter_cutoff(float filt_hz) { _pilot_throttle_filter.set_cutoff_frequency(filt_hz); }
     void                set_forward(float forward_in) { _forward_in = forward_in; }; // range -1 ~ +1
     void                set_forward_filter_cutoff(float filt_hz) { _forward_filter.set_cutoff_frequency(filt_hz); }
     void                set_lateral(float lateral_in) { _lateral_in = lateral_in; };     // range -1 ~ +1
@@ -106,6 +108,7 @@ public:
     float               get_throttle_out() const { return _throttle_out; }
     float               get_throttle() const { return constrain_float(_throttle_filter.get(), 0.0f, 1.0f); }
     float               get_throttle_bidirectional() const { return constrain_float(2 * (_throttle_filter.get() - 0.5f), -1.0f, 1.0f); }
+    float               get_pilot_throttle() const { return constrain_float(_pilot_throttle_filter.get(), -1.0f, 1.0f); }
     float               get_forward() const { return constrain_float(_forward_filter.get(),-0.5f,0.5f); }
     float               get_lateral() const { return constrain_float(_lateral_filter.get(),-0.5f,0.5f); }
     virtual float       get_throttle_hover() const = 0;
@@ -230,10 +233,12 @@ protected:
     float               _yaw_in_ff;                 // desired yaw feed forward control from attitude controller, -1 ~ +1
     float               _throttle_in;               // last throttle input from set_throttle caller
     float               _throttle_out;              // throttle after mixing is complete
-    float               _forward_in;                // last forward input from set_forward caller
+    float               _pilot_throttle_in;         // last pilot throttle input from set_pilot_throttle caller   
+ 	float               _forward_in;                // last forward input from set_forward caller
     float               _lateral_in;                // last lateral input from set_lateral caller
     float               _throttle_avg_max;          // last throttle input from set_throttle_avg_max
     LowPassFilterFloat  _throttle_filter;           // throttle input filter
+    LowPassFilterFloat  _pilot_throttle_filter;     // pilot throttle input filter
     LowPassFilterFloat  _forward_filter;            // forward input filter
     LowPassFilterFloat  _lateral_filter;            // lateral input filter
     DesiredSpoolState   _spool_desired;             // desired spool state
