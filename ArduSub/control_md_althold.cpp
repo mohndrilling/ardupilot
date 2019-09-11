@@ -64,9 +64,16 @@ void Sub::md_althold_run()
     //threshold for pilot input commands
     float inp_threshold = 0.05f;
 
-    if (  fabsf(channel_throttle->norm_input()-0.5f) > inp_threshold
-       || fabsf(channel_forward->norm_input()) > inp_threshold
-       || fabsf(channel_lateral->norm_input()) > inp_threshold) { // Pilot input above 5%
+    // relax alt controller if throttle inputs are above threshold, or if forward or lateral inputs are above threshold AND the control frame
+    // is set to BODY. (Scenario: control frame is set to body and vehicle pitched nose up. As we drive forward, we actually affect the altitude, so
+    // the depth controller would block this movement if not relaxed)
+    bool forw_lat_in = fabsf(channel_forward->norm_input()) > inp_threshold
+                       || fabsf(channel_lateral->norm_input()) > inp_threshold;
+
+    bool relax_depth_control = fabsf(channel_throttle->norm_input()-0.5f) > inp_threshold
+                               || (g.control_frame == CF_Body && forw_lat_in);
+
+    if (relax_depth_control) { // Pilot input above 5%
 
         // disable depth control
         // the throttle for hovering will be applied along inertial z-axis

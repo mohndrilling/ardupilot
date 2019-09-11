@@ -58,10 +58,13 @@ void Sub::md_net_tracking_run()
     //threshold for pilot input commands
     float inp_threshold = 0.05f;
 
-    // whether there are any pilot commands
-    bool pilot_in =  fabsf(channel_throttle->norm_input()-0.5f) > inp_threshold
-                 || fabsf(channel_forward->norm_input()) > inp_threshold
-                 || fabsf(channel_lateral->norm_input()) > inp_threshold;
+    // whether there are any pilot throttle commands
+    bool pilot_throttle_in =  fabsf(channel_throttle->norm_input()-0.5f) > inp_threshold;
+
+    // whether there are any pilot input commands
+    bool pilot_in = pilot_throttle_in
+                    || fabsf(channel_forward->norm_input()) > inp_threshold
+                    || fabsf(channel_lateral->norm_input()) > inp_threshold;
 
     ///////////// Attitude and Distance Control ////////////////////////
     // if stereovision keeps receiving heading and distance information from stereo camera data via mavlink, run distance and attitude controllers
@@ -127,7 +130,7 @@ void Sub::md_net_tracking_run()
     // Get last user velocity direction to check for zero derivative points
     static bool lastVelocityZWasNegative = false;
 
-    if ( pilot_in || fabs(throttle_out) > 0.0f) { // Pilot input above 5% or throttle_out set by nettracking library
+    if ( pilot_throttle_in || fabs(throttle_out) > 0.0f) { // Pilot throttle input above 5% or throttle_out set by nettracking library
 
         // disable depth control
         // the throttle for hovering will be applied along inertial z-axis
