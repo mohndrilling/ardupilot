@@ -497,7 +497,8 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
     float   roll_thrust;                // roll thrust input value, +/- 1.0
     float   pitch_thrust;               // pitch thrust input value, +/- 1.0
     float   yaw_thrust;                 // yaw thrust input value, +/- 1.0
-    float   throttle_thrust;            // throttle thrust input value, +/- 1.0
+    float   throttle_thrust;            // controller throttle thrust input value, +/- 1.0
+    float   pilot_throttle_thrust;      // pilot throttle thrust input value, +/- 1.0
     float   forward_thrust;             // forward thrust input value, +/- 1.0
     float   lateral_thrust;             // lateral thrust input value, +/- 1.0
 
@@ -505,6 +506,7 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
     pitch_thrust = _pitch_in;
     yaw_thrust = _yaw_in;
     throttle_thrust = get_throttle_bidirectional();
+    pilot_throttle_thrust = get_pilot_throttle();
     forward_thrust = get_forward();
     lateral_thrust = get_lateral();
 
@@ -530,8 +532,9 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
         limit.throttle_upper = true;
     }
 
-    // positive throttle should result in a lift up of the rov along the negative z-axis. Therefore invert the throttle thrust
+    // positive throttle should result in a lift up of the rov along the negative z-axis. Therefore invert the throttle thrusts
     throttle_thrust = - throttle_thrust;
+    pilot_throttle_thrust = - pilot_throttle_thrust;
 
     rpt_max = 1; //Initialized to 1 so that normalization will only occur if value is saturated
     yfl_max = 1; //Initialized to 1 so that normalization will only occur if value is saturated
@@ -558,7 +561,7 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
                          forward_thrust * _cf_forward_factor[i] +
                          lateral_thrust * _cf_lateral_factor[i] +
                          throttle_thrust * _inertial_throttle_factor[i] +
-                         _pilot_throttle_in * _cf_throttle_factor[i];
+                         pilot_throttle_thrust * _cf_throttle_factor[i];
             if (fabsf(rpt_out[i]) > rpt_max) {
                 rpt_max = fabsf(rpt_out[i]);
             }
@@ -569,7 +572,7 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
                          forward_thrust * _cf_forward_factor[i] +
                          lateral_thrust * _cf_lateral_factor[i] +
                          throttle_thrust * _inertial_throttle_factor[i] +
-                         _pilot_throttle_in * _cf_throttle_factor[i];
+                         pilot_throttle_thrust * _cf_throttle_factor[i];
             if (fabsf(yfl_out[i]) > yfl_max) {
                 yfl_max = fabsf(yfl_out[i]);
             }

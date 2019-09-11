@@ -117,6 +117,7 @@ void Sub::althold_run()
         // update cut off frequencies for translational input filters
         motors.set_forward_filter_cutoff(g.forward_filt);
         motors.set_lateral_filter_cutoff(g.lateral_filt);
+        motors.set_pilot_throttle_filter_cutoff(g.throttle_filt);
 
         // reset z targets to current values
         pos_control.relax_alt_hold_controllers();

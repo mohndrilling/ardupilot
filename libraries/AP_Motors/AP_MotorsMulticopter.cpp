@@ -283,8 +283,19 @@ void AP_MotorsMulticopter::update_throttle_filter()
             _throttle_filter.reset(1.0f);
         }
 
+        // pilot throttle
+        _pilot_throttle_filter.apply(_pilot_throttle_in, 1.0f/_loop_rate);
+        // constrain filtered throttle
+        if (_pilot_throttle_filter.get() < -0.5f) {
+            _pilot_throttle_filter.reset(-0.5f);
+        }
+        if (_pilot_throttle_filter.get() > 0.5f) {
+            _pilot_throttle_filter.reset(0.5f);
+        }
+
     } else {
         _throttle_filter.reset(0.0f);
+        _pilot_throttle_filter.reset(0.0f);
     }
 }
 

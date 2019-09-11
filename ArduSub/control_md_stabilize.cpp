@@ -46,6 +46,7 @@ void Sub::md_stabilize_run()
     // update cut off frequencies for translational input filters
     motors.set_forward_filter_cutoff(g.forward_filt);
     motors.set_lateral_filter_cutoff(g.lateral_filt);
+    motors.set_pilot_throttle_filter_cutoff(g.throttle_filt);
 
     //control_in is range -1000-1000
     //radio_in is raw pwm value

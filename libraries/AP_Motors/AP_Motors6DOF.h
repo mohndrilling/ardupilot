@@ -35,8 +35,6 @@ public:
     // Override parent
     void output_min() override;
 
-    void set_pilot_throttle(float pilot_throttle_in) { _pilot_throttle_in = -pilot_throttle_in; }
-
     // set vehicle attitude (to perform proper control allocation of the throttle commands)
     void set_vehicle_attitude(Matrix3f body_to_ned_rot_mat) { _vehicle_attitude = body_to_ned_rot_mat; }
 
@@ -87,7 +85,4 @@ protected:
     // coordinate frames
     Matrix3f            _vehicle_attitude;          // rotation matrix from vehicle's body frame to inertial frame
     Matrix3f            _control_frame;             // rotation matrix describing the coordinate frame where pilot commands are interpreted in
-
-    // pilot throttle
-    float _pilot_throttle_in = 0.0f;
 };
