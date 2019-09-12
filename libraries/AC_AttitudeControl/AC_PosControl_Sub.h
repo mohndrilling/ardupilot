@@ -3,13 +3,13 @@
 #include "AC_PosControl.h"
 
 // distance controller default definitions
-# define POSCONTROL_DIST_P                    0.3f    // distance controller P gain default
-# define POSCONTROL_DIST_I                    3.0f    // distance controller I gain default
+# define POSCONTROL_DIST_P                    0.6f    // distance controller P gain default
+# define POSCONTROL_DIST_I                    6.0f    // distance controller I gain default
 # define POSCONTROL_DIST_D                    0.0f    // distance controller D gain default
 # define POSCONTROL_DIST_IMAX                 0.01f   // distance controller IMAX gain default
 # define POSCONTROL_DIST_FILT_HZ              10.0f   // distance controller input filter default
 # define POSCONTROL_DIST_DT                   0.01f   // distance controller dt default
-# define POSCONTROL_DIST_PMAX                 0.15f   // distance controller PMAX gain default
+# define POSCONTROL_DIST_PMAX                 0.3f   // distance controller PMAX gain default
 
 // mesh count controller default definitions
 # define POSCONTROL_MESH_CNT_P                    0.02f   // mesh controller P gain default
