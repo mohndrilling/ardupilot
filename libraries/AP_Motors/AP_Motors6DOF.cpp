@@ -555,11 +555,9 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
             _cf_lateral_factor[i] = thrust_vector_C[1];
             _cf_throttle_factor[i] = thrust_vector_C[2];
 
-            // calculate roll, pitch and linear contribution for each motor
+            // calculate roll, pitch and throttle contribution for each motor (affects only vertical thrusters if interpreted in body frame)
             rpt_out[i] = roll_thrust * _roll_factor[i] +
                          pitch_thrust * _pitch_factor[i] +
-                         forward_thrust * _cf_forward_factor[i] +
-                         lateral_thrust * _cf_lateral_factor[i] +
                          throttle_thrust * _inertial_throttle_factor[i] +
                          pilot_throttle_thrust * _cf_throttle_factor[i];
             if (fabsf(rpt_out[i]) > rpt_max) {
@@ -567,12 +565,10 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
             }
 
 
-            // calculate yaw and linear contribution for each motor
+            // calculate yaw, forward and lateral contribution for each motor (affects only horizontal thrusters if interpreted in body frame)
             yfl_out[i] = yaw_thrust * _yaw_factor[i] +
                          forward_thrust * _cf_forward_factor[i] +
-                         lateral_thrust * _cf_lateral_factor[i] +
-                         throttle_thrust * _inertial_throttle_factor[i] +
-                         pilot_throttle_thrust * _cf_throttle_factor[i];
+                         lateral_thrust * _cf_lateral_factor[i];
             if (fabsf(yfl_out[i]) > yfl_max) {
                 yfl_max = fabsf(yfl_out[i]);
             }
