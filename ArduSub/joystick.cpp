@@ -317,16 +317,16 @@ void Sub::handle_jsbutton_press(uint8_t button, bool shift, bool held)
         }
         break;
     case JSButton::button_function_t::k_trim_roll_inc:
-        rollTrim = constrain_float(rollTrim+10,-200,200);
+        rollTrim = constrain_float(rollTrim+10,-400,400);
         break;
     case JSButton::button_function_t::k_trim_roll_dec:
-        rollTrim = constrain_float(rollTrim-10,-200,200);
+        rollTrim = constrain_float(rollTrim-10,-400,400);
         break;
     case JSButton::button_function_t::k_trim_pitch_inc:
-        pitchTrim = constrain_float(pitchTrim+10,-200,200);
+        pitchTrim = constrain_float(pitchTrim+10,-400,400);
         break;
     case JSButton::button_function_t::k_trim_pitch_dec:
-        pitchTrim = constrain_float(pitchTrim-10,-200,200);
+        pitchTrim = constrain_float(pitchTrim-10,-400,400);
         break;
     case JSButton::button_function_t::k_input_hold_set:
         if(!motors.armed()) {
