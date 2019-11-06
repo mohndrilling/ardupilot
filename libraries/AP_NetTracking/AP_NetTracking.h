@@ -58,6 +58,9 @@ public:
     // in case of plane net shape, ROV directly throttles to initial altitude
     void set_return_home() { _state = _net_shape == NetShape::Tube ? State::ReturnToHomeHeading : State::ReturnToHomeAltitude; }
 
+    // get net tracking state to be sent via mavlink
+    uint8_t get_state() { return _state; }
+
     // resets internal variables to default values
     void reset();
 
@@ -103,6 +106,7 @@ protected:
 
     enum State
     {
+      Inactive,
       Scanning,
       Throttle,
       Pause,
