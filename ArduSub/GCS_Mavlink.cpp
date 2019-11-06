@@ -145,6 +145,22 @@ void GCS_MAVLINK_Sub::send_scaled_pressure3()
         sub.celsius.temperature() * 100);
 }
 
+void GCS_MAVLINK_Sub::send_nettracking_state()
+{
+    uint8_t nettr_state;
+    if (sub.control_mode == MD_NET_TRACKING)
+    {
+        nettr_state = sub.nettracking.get_state();
+    }
+    else
+    {
+        nettr_state = 0; // inactive
+    }
+    mavlink_msg_nettracking_state_send(
+        chan,
+        nettr_state);
+}
+
 bool GCS_MAVLINK_Sub::send_info()
 {
     // Just do this all at once, hopefully the hard-wire telemetry requirement means this is ok
@@ -378,6 +394,7 @@ static const ap_message STREAM_EXTENDED_STATUS_msgs[] = {
     MSG_GPS2_RTK,
     MSG_NAV_CONTROLLER_OUTPUT,
     MSG_FENCE_STATUS,
+    MSG_NETTRACKING_STATE,
     MSG_NAMED_FLOAT
 };
 static const ap_message STREAM_POSITION_msgs[] = {

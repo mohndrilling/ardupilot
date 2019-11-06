@@ -95,6 +95,7 @@ enum ap_message : uint8_t {
     MSG_HOME,
     MSG_NAMED_FLOAT,
     MSG_EXTENDED_SYS_STATE,
+    MSG_NETTRACKING_STATE,
     MSG_LAST // MSG_LAST must be the last entry in this enum
 };
 
@@ -231,6 +232,7 @@ public:
     void send_sys_status();
     void send_set_position_target_global_int(uint8_t target_system, uint8_t target_component, const Location& loc);
     void send_rpm() const;
+    virtual void send_nettracking_state();
 
     // return a bitmap of active channels. Used by libraries to loop
     // over active channels to send to all active channels    

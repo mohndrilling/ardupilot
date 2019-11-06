@@ -959,7 +959,8 @@ ap_message GCS_MAVLINK::mavlink_id_to_ap_message_id(const uint32_t mavlink_id) c
         { MAVLINK_MSG_ID_AOA_SSA,               MSG_AOA_SSA},
         { MAVLINK_MSG_ID_DEEPSTALL,             MSG_LANDING},
         { MAVLINK_MSG_ID_EXTENDED_SYS_STATE,    MSG_EXTENDED_SYS_STATE},
-            };
+        { MAVLINK_MSG_ID_NETTRACKING_STATE,     MSG_NETTRACKING_STATE},
+        };
 
     for (uint8_t i=0; i<ARRAY_SIZE(map); i++) {
         if (map[i].mavlink_id == mavlink_id) {
@@ -1891,6 +1892,11 @@ void GCS_MAVLINK::send_ahrs()
         0,
         ahrs.get_error_rp(),
         ahrs.get_error_yaw());
+}
+
+void GCS_MAVLINK::send_nettracking_state()
+{
+    // overwritten in vehicle code
 }
 
 /*
@@ -4321,6 +4327,11 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
     case MSG_VFR_HUD:
         CHECK_PAYLOAD_SIZE(VFR_HUD);
         send_vfr_hud();
+        break;
+
+    case MSG_NETTRACKING_STATE:
+        CHECK_PAYLOAD_SIZE(NETTRACKING_STATE);
+        send_nettracking_state();
         break;
 
     case MSG_VIBRATION:
