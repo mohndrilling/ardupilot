@@ -389,3 +389,15 @@ void AP_NetTracking::update_phase_shift()
     gcs().send_named_float("im_shift_y", _phase_shift_filt.get().y);
 }
 
+float AP_NetTracking::get_loop_progress()
+{
+    // only for "closed" net shapes
+    if (_net_shape != NetShape::Tube)
+        return -1;
+
+    //progress in percent (elapsed angle / 360 degrees ' 100)
+    float progress = fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) / 3.6f;
+    // constrain
+    return constrain_float(progress, 0.0f, 100.0f);
+}
+

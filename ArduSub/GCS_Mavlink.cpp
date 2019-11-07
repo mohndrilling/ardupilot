@@ -147,18 +147,15 @@ void GCS_MAVLINK_Sub::send_scaled_pressure3()
 
 void GCS_MAVLINK_Sub::send_nettracking_state()
 {
-    uint8_t nettr_state;
+    uint8_t nettr_state = 0; // inactive by default
+    float loop_progress = -1; // invalid by default
     if (sub.control_mode == MD_NET_TRACKING)
     {
         nettr_state = sub.nettracking.get_state();
+        loop_progress = sub.nettracking.get_loop_progress();
     }
-    else
-    {
-        nettr_state = 0; // inactive
-    }
-    mavlink_msg_nettracking_state_send(
-        chan,
-        nettr_state);
+
+    mavlink_msg_nettracking_state_send(chan, nettr_state, loop_progress);
 }
 
 bool GCS_MAVLINK_Sub::send_info()

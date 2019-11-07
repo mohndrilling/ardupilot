@@ -61,6 +61,9 @@ public:
     // get net tracking state to be sent via mavlink
     uint8_t get_state() { return _state; }
 
+    // get loop progress in percent (further sent via mavlink)
+    float get_loop_progress();
+
     // resets internal variables to default values
     void reset();
 
