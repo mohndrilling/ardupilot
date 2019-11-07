@@ -528,7 +528,7 @@ MAV_RESULT GCS_MAVLINK_Sub::handle_command_long_packet(const mavlink_command_lon
         }
         return MAV_RESULT_ACCEPTED;
 
-    case MAV_CMD_NAV_RETURN_TO_LAUNCH:
+    case MAV_CMD_NETTR_RETURN_TO_LAUNCH:
         if (sub.control_mode == MD_NET_TRACKING) {
             sub.nettracking.set_return_home();
         }
