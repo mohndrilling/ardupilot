@@ -279,6 +279,8 @@ void AP_NetTracking::update_lateral_out(float &lateral_out)
     }
     else if (_net_shape == NetShape::Tube)
     {
+        update_loop_progress();
+
         // check if ROV has performed 360 degrees of scanning
         gcs().send_named_float("dyaw", fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw));
         if (fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) > 360.0f)
@@ -292,6 +294,9 @@ void AP_NetTracking::update_lateral_out(float &lateral_out)
             // switch to Throttle state and store the current absolute opt flow y distance to track the distance that the image is traveling during throttle state
             _state = State::Throttle;
             _initial_phase_shift_sumy = _phase_shift_sum_y;
+
+            // reset loop progress
+            _loop_progress = -1;
         }
     }
 }
@@ -389,15 +394,16 @@ void AP_NetTracking::update_phase_shift()
     gcs().send_named_float("im_shift_y", _phase_shift_filt.get().y);
 }
 
-float AP_NetTracking::get_loop_progress()
+void AP_NetTracking::update_loop_progress()
 {
-    // only for "closed" net shapes
-    if (_net_shape != NetShape::Tube)
-        return -1;
-
     //progress in percent (elapsed angle / 360 degrees ' 100)
-    float progress = fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) / 3.6f;
+    float tmp_loop_progress = fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) / 3.6f;
+
+    // only update if it has increased since last run
+    if (tmp_loop_progress > _loop_progress)
+        _loop_progress = tmp_loop_progress;
+
     // constrain
-    return constrain_float(progress, 0.0f, 100.0f);
+    constrain_float(_loop_progress, 0.0f, 100.0f);
 }
 
