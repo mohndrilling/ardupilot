@@ -36,7 +36,8 @@ public:
                     _stereo_vision(stereo_vision),
                     _state(State::Scanning),
                     _perform_att_ctrl(false),
-                    _phase_shift_filt(AP_NETTRACKING_PHASE_SHIFT_CUTOFF_FREQ_DEFAULT)
+                    _phase_shift_filt(AP_NETTRACKING_PHASE_SHIFT_CUTOFF_FREQ_DEFAULT),
+                    _loop_progress(-1)
     {
         AP_Param::setup_object_defaults(this, var_info);
     }
@@ -61,8 +62,8 @@ public:
     // get net tracking state to be sent via mavlink
     uint8_t get_state() { return _state; }
 
-    // get loop progress in percent (further sent via mavlink)
-    float get_loop_progress();
+    // get 360 degrees loop progress in percent (further sent via mavlink)
+    float get_loop_progress() { return _loop_progress; }
 
     // resets internal variables to default values
     void reset();
@@ -86,6 +87,9 @@ protected:
 
     // updates the phase shift low pass filter by new measurement values and accumulates the absolute distance, the image has shifted
     void update_phase_shift();
+
+    //update loop progress (just for monitoring)
+    void update_loop_progress();
 
     // References to external libraries
     const AP_AHRS_View&         _ahrs;
@@ -176,6 +180,9 @@ protected:
 
     // net tracking State
     State _state;
+
+    // 360 degrees loop progress in percent
+    float _loop_progress;
 
     // sensor information
     SensorIntervals _sensor_intervals;
