@@ -79,6 +79,9 @@ public:
     /// reset the integrator of the optical flow controller
     void relax_optfl_controller() { _pid_optfl.reset_I(); }
 
+    // user settable parameters
+    static const struct AP_Param::GroupInfo var_info[];
+
 private:
     float       _alt_max; // max altitude - should be updated from the main code with altitude limit from fence
     float       _alt_min; // min altitude - should be updated from the main code with altitude limit from fence

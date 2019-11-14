@@ -1,6 +1,149 @@
 #include "AC_PosControl_Sub.h"
 #include "AP_StereoVision/AP_StereoVision.h"
 
+// table of user settable parameters
+const AP_Param::GroupInfo AC_PosControl_Sub::var_info[] = {
+    // parameters from parent vehicle
+    AP_NESTEDGROUPINFO(AC_PosControl, 0),
+
+    // @Param: DIST_P
+    // @DisplayName: Distance controller P gain
+    // @Description: Distance controller P gain.
+    // @Range: 0.0 0.30
+    // @Increment: 0.005
+    // @User: Standard
+
+    // @Param: DIST_I
+    // @DisplayName: Distance controller I gain
+    // @Description: Distance controller I gain.
+    // @Range: 0.0 0.5
+    // @Increment: 0.01
+    // @User: Standard
+
+    // @Param: DIST_IMAX
+    // @DisplayName: Distance controller I gain maximum
+    // @Description: Distance controller I gain maximum.
+    // @Range: 0 1
+    // @Increment: 0.01
+    // @Units: %
+    // @User: Standard
+
+    // @Param: DIST_D
+    // @DisplayName: Distance controller D gain
+    // @Description: Distance controller D gain.
+    // @Range: 0.0 0.02
+    // @Increment: 0.001
+    // @User: Standard
+
+    // @Param: DIST_FF
+    // @DisplayName: Distance controller feed forward
+    // @Description: Distance controller feed forward
+    // @Range: 0 0.5
+    // @Increment: 0.001
+    // @User: Standard
+
+    // @Param: DIST_FILT
+    // @DisplayName: Distance controller input frequency in Hz
+    // @Description: Distance controller input frequency in Hz
+    // @Range: 1 100
+    // @Increment: 1
+    // @Units: Hz
+    // @User: Standard
+    AP_SUBGROUPINFO(_pid_dist, "_DIST_", 1, AC_PosControl_Sub, AC_PID),
+
+    // @Param: MSH_CNT_P
+    // @DisplayName: Mesh count controller P gain
+    // @Description: Mesh count controller P gain.
+    // @Range: 0.0 0.30
+    // @Increment: 0.005
+    // @User: Standard
+
+    // @Param: MSH_CNT_I
+    // @DisplayName: Mesh count controller I gain
+    // @Description: Mesh count controller I gain.
+    // @Range: 0.0 0.5
+    // @Increment: 0.01
+    // @User: Standard
+
+    // @Param: MSH_CNT_IMAX
+    // @DisplayName: Mesh count controller I gain maximum
+    // @Description: Mesh count controller I gain maximum.
+    // @Range: 0 1
+    // @Increment: 0.01
+    // @Units: %
+    // @User: Standard
+
+    // @Param: MSH_CNT_D
+    // @DisplayName: Mesh count controller D gain
+    // @Description: Mesh count controller D gain.
+    // @Range: 0.0 0.02
+    // @Increment: 0.001
+    // @User: Standard
+
+    // @Param: MSH_CNT_FF
+    // @DisplayName: Mesh count controller feed forward
+    // @Description: Mesh count controller feed forward
+    // @Range: 0 0.5
+    // @Increment: 0.001
+    // @User: Standard
+
+    // @Param: MSH_CNT_FILT
+    // @DisplayName: Mesh count controller input frequency in Hz
+    // @Description: Mesh count controller input frequency in Hz
+    // @Range: 1 100
+    // @Increment: 1
+    // @Units: Hz
+    // @User: Standard
+    AP_SUBGROUPINFO(_pid_mesh_cnt, "_MSH_CNT_", 2, AC_PosControl_Sub, AC_PID),
+
+    // @Param: OPTFL_P
+    // @DisplayName: Optical flow controller P gain
+    // @Description: Optical flow controller P gain.
+    // @Range: 0.0 0.30
+    // @Increment: 0.005
+    // @User: Standard
+
+    // @Param: OPTFL_I
+    // @DisplayName: Optical flow controller I gain
+    // @Description: Optical flow controller I gain.
+    // @Range: 0.0 0.5
+    // @Increment: 0.01
+    // @User: Standard
+
+    // @Param: OPTFL_IMAX
+    // @DisplayName: Optical flow controller I gain maximum
+    // @Description: Optical flow controller I gain maximum.
+    // @Range: 0 1
+    // @Increment: 0.01
+    // @Units: %
+    // @User: Standard
+
+    // @Param: OPTFL_D
+    // @DisplayName: Optical flow controller D gain
+    // @Description: Optical flow controller D gain.
+    // @Range: 0.0 0.02
+    // @Increment: 0.001
+    // @User: Standard
+
+    // @Param: OPTFL_FF
+    // @DisplayName: Optical flow controller feed forward
+    // @Description: Optical flow controller feed forward
+    // @Range: 0 0.5
+    // @Increment: 0.001
+    // @User: Standard
+
+    // @Param: OPTFL_FILT
+    // @DisplayName: Optical flow controller input frequency in Hz
+    // @Description: Optical flow controller input frequency in Hz
+    // @Range: 1 100
+    // @Increment: 1
+    // @Units: Hz
+    // @User: Standard
+    AP_SUBGROUPINFO(_pid_optfl, "_OPTFL_", 3, AC_PosControl_Sub, AC_PID),
+
+    AP_GROUPEND
+};
+
 AC_PosControl_Sub::AC_PosControl_Sub(const AP_AHRS_View& ahrs, const AP_InertialNav& inav,
                                      AP_Motors& motors, AC_AttitudeControl& attitude_control) :
     AC_PosControl(ahrs, inav, motors, attitude_control),
