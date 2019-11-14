@@ -470,8 +470,8 @@ const AP_Param::Info Sub::var_info[] = {
     GOBJECT(attitude_control, "ATC_", AC_AttitudeControl_Sub),
 
     // @Group: PSC
-    // @Path: ../libraries/AC_AttitudeControl/AC_PosControl.cpp
-    GOBJECT(pos_control, "PSC", AC_PosControl),
+    // @Path: ../libraries/AC_AttitudeControl/AC_PosControl.cpp,../libraries/AC_AttitudeControl/AC_PosControl_Sub.cpp
+    GOBJECT(pos_control, "PSC", AC_PosControl_Sub),
 
     // @Group: SR0_
     // @Path: GCS_Mavlink.cpp
