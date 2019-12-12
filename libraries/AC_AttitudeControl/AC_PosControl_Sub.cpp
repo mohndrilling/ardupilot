@@ -6,50 +6,75 @@ const AP_Param::GroupInfo AC_PosControl_Sub::var_info[] = {
     // parameters from parent vehicle
     AP_NESTEDGROUPINFO(AC_PosControl, 0),
 
-    // @Param: DIST_P
-    // @DisplayName: Distance controller P gain
-    // @Description: Distance controller P gain.
+    // @Param: VELDST_P
+    // @DisplayName: Distance derivative controller P gain
+    // @Description: Distance derivative controller P gain.
     // @Range: 0.0 0.30
     // @Increment: 0.005
     // @User: Standard
 
-    // @Param: DIST_I
-    // @DisplayName: Distance controller I gain
-    // @Description: Distance controller I gain.
+    // @Param: VELDST_I
+    // @DisplayName: Distance derivative controller I gain
+    // @Description: Distance derivative controller I gain.
     // @Range: 0.0 0.5
     // @Increment: 0.01
     // @User: Standard
 
-    // @Param: DIST_IMAX
-    // @DisplayName: Distance controller I gain maximum
-    // @Description: Distance controller I gain maximum.
+    // @Param: VELDST_IMAX
+    // @DisplayName: Distance derivative controller I gain maximum
+    // @Description: Distance derivative controller I gain maximum.
     // @Range: 0 1
     // @Increment: 0.01
     // @Units: %
     // @User: Standard
 
-    // @Param: DIST_D
-    // @DisplayName: Distance controller D gain
-    // @Description: Distance controller D gain.
+    // @Param: VELDST_D
+    // @DisplayName: Distance derivative controller D gain
+    // @Description: Distance derivative controller D gain.
     // @Range: 0.0 0.02
     // @Increment: 0.001
     // @User: Standard
 
-    // @Param: DIST_FF
-    // @DisplayName: Distance controller feed forward
-    // @Description: Distance controller feed forward
+    // @Param: VELDST_FF
+    // @DisplayName: Distance derivative controller feed forward
+    // @Description: Distance derivative controller feed forward
     // @Range: 0 0.5
     // @Increment: 0.001
     // @User: Standard
 
-    // @Param: DIST_FILT
-    // @DisplayName: Distance controller input frequency in Hz
-    // @Description: Distance controller input frequency in Hz
+    // @Param: VELDST_FILT
+    // @DisplayName: Distance derivative controller input cutoff frequency in Hz
+    // @Description: Distance derivative controller input cutoff frequency in Hz
     // @Range: 1 100
     // @Increment: 1
     // @Units: Hz
     // @User: Standard
-    AP_SUBGROUPINFO(_pid_dist, "_DIST_", 1, AC_PosControl_Sub, AC_PID),
+    AP_SUBGROUPINFO(_pid_vel_dist, "_VELDST_", 1, AC_PosControl_Sub, AC_PID),
+
+    // @Param: _POSDST_
+    // @DisplayName: Distance controller P gain
+    // @Description: Distance controller P gain.  Converts distance error to target velocity
+    // @Range: 0.500 2.000
+    // @User: Standard
+    AP_SUBGROUPINFO(_p_pos_dist, "_POSDST_", 2, AC_PosControl_Sub, AC_P),
+
+    // @Param: _DDST_FILT
+    // @DisplayName: Low pass filter of the velocity w.r.t. the fishing net during net tracking
+    // @Description: Low pass filter of the velocity w.r.t. the fishing net during net tracking
+    // @Units: Hz
+    // @Range: 0.5 5
+    // @Increment: 0.1
+    // @User: Advanced
+    AP_GROUPINFO("_DDST_FILT", 3, AC_PosControl_Sub, _dist_vel_filter_cutoff, POSCONTROL_DIST_VEL_FILTER_HZ),
+
+    // @Param: _DST_LEASH
+    // @DisplayName: Maximum value of the distance error during net tracking
+    // @Description: Maximum value of the distance error during net tracking
+    // @Units: Hz
+    // @Range: 0.5 5
+    // @Increment: 0.1
+    // @User: Advanced
+    AP_GROUPINFO("_DST_LEASH", 4, AC_PosControl_Sub, _leash_dist, POSCONTROL_DIST_LEASH_LENGTH),
 
     // @Param: MSH_CNT_P
     // @DisplayName: Mesh count controller P gain
@@ -94,7 +119,7 @@ const AP_Param::GroupInfo AC_PosControl_Sub::var_info[] = {
     // @Increment: 1
     // @Units: Hz
     // @User: Standard
-    AP_SUBGROUPINFO(_pid_mesh_cnt, "_MSH_CNT_", 2, AC_PosControl_Sub, AC_PID),
+    AP_SUBGROUPINFO(_pid_mesh_cnt, "_MSH_CNT_", 5, AC_PosControl_Sub, AC_PID),
 
     // @Param: OPTFL_P
     // @DisplayName: Optical flow controller P gain
@@ -119,7 +144,7 @@ const AP_Param::GroupInfo AC_PosControl_Sub::var_info[] = {
     // @User: Standard
 
     // @Param: OPTFL_D
-    // @DisplayName: Optical flow controller D gain
+    // @DisplayName: Optical flow contr0,00oller D gain
     // @Description: Optical flow controller D gain.
     // @Range: 0.0 0.02
     // @Increment: 0.001
@@ -139,7 +164,7 @@ const AP_Param::GroupInfo AC_PosControl_Sub::var_info[] = {
     // @Increment: 1
     // @Units: Hz
     // @User: Standard
-    AP_SUBGROUPINFO(_pid_optfl, "_OPTFL_", 3, AC_PosControl_Sub, AC_PID),
+    AP_SUBGROUPINFO(_pid_optfl, "_OPTFL_", 6, AC_PosControl_Sub, AC_PID),
 
     AP_GROUPEND
 };
@@ -149,7 +174,9 @@ AC_PosControl_Sub::AC_PosControl_Sub(const AP_AHRS_View& ahrs, const AP_Inertial
     AC_PosControl(ahrs, inav, motors, attitude_control),
     _alt_max(0.0f),
     _alt_min(0.0f),
-    _pid_dist(POSCONTROL_DIST_P, POSCONTROL_DIST_I, POSCONTROL_DIST_D, POSCONTROL_DIST_IMAX, POSCONTROL_DIST_FILT_HZ, POSCONTROL_DIST_DT),
+    _dist_last(0.0f),
+    _pid_vel_dist(POSCONTROL_DIST_VEL_P, POSCONTROL_DIST_VEL_I, POSCONTROL_DIST_VEL_D, POSCONTROL_DIST_VEL_IMAX, POSCONTROL_DIST_VEL_FILT_HZ, POSCONTROL_DIST_VEL_DT),
+    _p_pos_dist(POSCONTROL_DIST_P),
     _pid_mesh_cnt(POSCONTROL_MESH_CNT_P, POSCONTROL_MESH_CNT_I, POSCONTROL_MESH_CNT_D, POSCONTROL_MESH_CNT_IMAX, POSCONTROL_MESH_CNT_FILT_HZ, POSCONTROL_MESH_CNT_DT),
     _pid_optfl(POSCONTROL_OPTFL_P, POSCONTROL_OPTFL_I, POSCONTROL_OPTFL_D, POSCONTROL_OPTFL_IMAX, POSCONTROL_OPTFL_FILT_HZ, POSCONTROL_OPTFL_DT)
 {}
@@ -252,7 +279,7 @@ void AC_PosControl_Sub::relax_alt_hold_controllers()
     _flags.reset_accel_to_throttle = true;
 }
 
-void AC_PosControl_Sub::update_dist_controller(float& target_forward, float distance_error, float dt, bool update)
+void AC_PosControl_Sub::update_dist_controller(float& target_forward, float cur_dist, float desired_dist, float dt, bool update)
 {
     // simple pid controller for distance control
     // todo: check if useful to use implemented xy-position controller
@@ -260,20 +287,45 @@ void AC_PosControl_Sub::update_dist_controller(float& target_forward, float dist
 
     if (update)
     {
-        _pid_dist.set_dt(dt);
-        _pid_dist.set_input_filter_all(distance_error);
+        // distance error
+        float dist_error = desired_dist - cur_dist;
+
+        // leash
+        dist_error = constrain_float(dist_error, -_leash_dist, _leash_dist);
+
+        // target velocity
+        // TODO: use square root controller
+        // TODO: constrain target velocity?
+        float vel_dist_target = _p_pos_dist.get_p(dist_error);
+
+        // calculate relative velocity w.r.t the net
+        _dist_vel_filter.set_cutoff_frequency(_dist_vel_filter_cutoff);
+        float cur_vel_dist = _dist_vel_filter.apply((cur_dist - _dist_last) / dt, dt);
+        _dist_last = cur_dist;
+
+        // velocity error
+        float vel_dist_error = vel_dist_target - cur_vel_dist;
+
+        // update pid controller
+        // negate pid input, as positive distance error requires negative motor input (backwards driving) and vice versa
+        _pid_vel_dist.set_dt(dt);
+        _pid_vel_dist.set_input_filter_all(- vel_dist_error);
+
+        // debugging output
+        gcs().send_named_float("dst", cur_dist);
+        gcs().send_named_float("dstvel", cur_vel_dist);
+        gcs().send_named_float("d_dstvel", vel_dist_target);
     }
 
     // separately calculate p, i, d values for logging
     // probably better to use square root constrain
-    p = _pid_dist.get_p();
-    p = constrain_float(p, -POSCONTROL_DIST_PMAX, POSCONTROL_DIST_PMAX);
+    p = _pid_vel_dist.get_p();
 
     // get i term
-    i = _pid_dist.get_i();
+    i = _pid_vel_dist.get_i();
 
     // get d term
-    d = _pid_dist.get_d();
+    d = _pid_vel_dist.get_d();
 
     target_forward = p + i + d;
 

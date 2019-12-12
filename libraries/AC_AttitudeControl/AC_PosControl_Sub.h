@@ -3,13 +3,17 @@
 #include "AC_PosControl.h"
 
 // distance controller default definitions
-# define POSCONTROL_DIST_P                    0.6f    // distance controller P gain default
-# define POSCONTROL_DIST_I                    6.0f    // distance controller I gain default
-# define POSCONTROL_DIST_D                    0.0f    // distance controller D gain default
-# define POSCONTROL_DIST_IMAX                 0.01f   // distance controller IMAX gain default
-# define POSCONTROL_DIST_FILT_HZ              10.0f   // distance controller input filter default
-# define POSCONTROL_DIST_DT                   0.01f   // distance controller dt default
-# define POSCONTROL_DIST_PMAX                 0.3f   // distance controller PMAX gain default
+# define POSCONTROL_DIST_VEL_P                    4.0f    // distance controller P gain default
+# define POSCONTROL_DIST_VEL_I                    0.03f    // distance controller I gain default
+# define POSCONTROL_DIST_VEL_IMAX                 0.05f   // distance controller IMAX gain default
+# define POSCONTROL_DIST_VEL_D                    0.0f    // distance controller D gain default
+# define POSCONTROL_DIST_VEL_FILT_HZ              10.0f   // distance controller input filter default
+# define POSCONTROL_DIST_VEL_DT                   0.01f   // distance controller dt default
+# define POSCONTROL_DIST_P                        0.3f    // distance controller distance to velocity gain
+
+#define POSCONTROL_DIST_VEL_FILTER_HZ             2.0f // low pass filter cutoff frequency for first distance derivation (velocity)
+
+#define POSCONTROL_DIST_LEASH_LENGTH              0.5f  // maximum distance error in m
 
 // mesh count controller default definitions
 # define POSCONTROL_MESH_CNT_P                    0.02f   // mesh controller P gain default
@@ -21,13 +25,13 @@
 # define POSCONTROL_MESH_CNT_PMAX                 0.08f   // mesh controller PMAX gain default
 
 // optfl lateral controller default definitions
-# define POSCONTROL_OPTFL_P                    0.0f   // opt flow controller P gain default
-# define POSCONTROL_OPTFL_I                    10.0f    // opt flow controller I gain default
-# define POSCONTROL_OPTFL_D                    0.0f    // opt flow controller D gain default
-# define POSCONTROL_OPTFL_IMAX                 50.0f  // opt flow controller IMAX gain default
-# define POSCONTROL_OPTFL_FILT_HZ              0.0f   // opt flow controller input filter default
-# define POSCONTROL_OPTFL_DT                   0.01f   // opt flow controller dt default
-# define POSCONTROL_OPTFL_PMAX                 20.0f   // opt flow controller PMAX gain default
+# define POSCONTROL_OPTFL_P                      0.0f   // opt flow controller P gain default
+# define POSCONTROL_OPTFL_I                      10.0f    // opt flow controller I gain default
+# define POSCONTROL_OPTFL_D                      0.0f    // opt flow controller D gain default
+# define POSCONTROL_OPTFL_IMAX                   50.0f  // opt flow controller IMAX gain default
+# define POSCONTROL_OPTFL_FILT_HZ                0.0f   // opt flow controller input filter default
+# define POSCONTROL_OPTFL_DT                     0.01f   // opt flow controller dt default
+# define POSCONTROL_OPTFL_PMAX                   20.0f   // opt flow controller PMAX gain default
 
 class AC_PosControl_Sub : public AC_PosControl {
 public:
@@ -68,7 +72,7 @@ public:
     void relax_alt_hold_controllers();
 
     /// control distance to net
-    void update_dist_controller(float& target_forward, float distance_error, float dt, bool update);
+    void update_dist_controller(float& target_forward, float cur_dist, float desired_dist, float dt, bool update);
 
     /// control currently visible net meshes
     void update_mesh_cnt_controller(float& target_forward, float mesh_cnt_error, float dt, bool update);
@@ -86,9 +90,17 @@ private:
     float       _alt_max; // max altitude - should be updated from the main code with altitude limit from fence
     float       _alt_min; // min altitude - should be updated from the main code with altitude limit from fence
 
-    float       _net_track_dist; // desired distance of vehicle to tracked net in meters
+    // position controller internal variables
+    float       _dist_last;             // last distance measurement in m, needed for velocity calculation during nettracking
+    AP_Float    _leash_dist;            // constrains distance error
 
-    AC_PID      _pid_dist; // distance controller
+    LowPassFilterFloat _dist_vel_filter;   // low-pass-filter on derivative of distance (relative velocity w.r.t. net)
+
+    AP_Float _dist_vel_filter_cutoff;       // dist_vel filter cutoff frequency
+
+    AC_PID      _pid_vel_dist; // distance controller
+    AC_P        _p_pos_dist;     // dist_error to velocity gain
+
 
     AC_PID      _pid_mesh_cnt; // mesh_cnt controller
 

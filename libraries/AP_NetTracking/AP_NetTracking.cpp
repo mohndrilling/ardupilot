@@ -237,13 +237,21 @@ void AP_NetTracking::update_lateral_out(float &lateral_out)
         // call controller to hold desired lateral velocity
         // interprete phase shift as optical flow by calculating derivation
         float d_optfl_x = _nettr_direction * _tracking_velocity; // factor needed to scale to reasonable optical flow setpoint
-        float optfl_x_error = d_optfl_x - _stereo_vision.get_cur_transl_shift().x / _sensor_intervals.pc_dt;
+        float optfl_x_error;
+        if (fabs(_sensor_intervals.pc_dt) > 0.0f)
+        {
+            optfl_x_error = d_optfl_x - _stereo_vision.get_cur_transl_shift().x / _sensor_intervals.pc_dt;
+        }
+        else
+        {
+            optfl_x_error = 0.0f; // no opt flow information available
+        }
 
         // get forward command from mesh count controller
         _pos_control.update_optfl_controller(_nettr_velocity, optfl_x_error, _sensor_intervals.pc_dt, _sensor_updates.pc_updated);
 
         gcs().send_named_float("lat_out", _nettr_velocity);
-        gcs().send_named_float("optfl_err", optfl_x_error);
+        gcs().send_named_float("optf_err", optfl_x_error);
 
     }
     else
@@ -331,12 +339,11 @@ void AP_NetTracking::update_forward_out(float &forward_out)
 
         // desired distance (m)
         float d_dist = float(_tracking_distance) / 100.0f;
-        float dist_error = cur_dist - d_dist;
 
         // get forward command from distance controller
-        _pos_control.update_dist_controller(forward_out, dist_error, dt, update_target);
+        _pos_control.update_dist_controller(forward_out, cur_dist, d_dist, dt, update_target);
 
-        _perform_att_ctrl = abs(dist_error) < 10.0f;
+        _perform_att_ctrl = abs(d_dist - cur_dist) < 10.0f;
     }
 }
 
