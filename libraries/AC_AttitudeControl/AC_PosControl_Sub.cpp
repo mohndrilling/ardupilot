@@ -121,21 +121,21 @@ const AP_Param::GroupInfo AC_PosControl_Sub::var_info[] = {
     // @User: Standard
     AP_SUBGROUPINFO(_pid_mesh_cnt, "_MSH_CNT_", 5, AC_PosControl_Sub, AC_PID),
 
-    // @Param: OPTFL_P
+    // @Param: OPTFLX_P
     // @DisplayName: Optical flow controller P gain
     // @Description: Optical flow controller P gain.
     // @Range: 0.0 0.30
     // @Increment: 0.005
     // @User: Standard
 
-    // @Param: OPTFL_I
+    // @Param: OPTFLX_I
     // @DisplayName: Optical flow controller I gain
     // @Description: Optical flow controller I gain.
     // @Range: 0.0 0.5
     // @Increment: 0.01
     // @User: Standard
 
-    // @Param: OPTFL_IMAX
+    // @Param: OPTFLX_IMAX
     // @DisplayName: Optical flow controller I gain maximum
     // @Description: Optical flow controller I gain maximum.
     // @Range: 0 1
@@ -143,28 +143,28 @@ const AP_Param::GroupInfo AC_PosControl_Sub::var_info[] = {
     // @Units: %
     // @User: Standard
 
-    // @Param: OPTFL_D
-    // @DisplayName: Optical flow contr0,00oller D gain
+    // @Param: OPTFLX_D
+    // @DisplayName: Optical flow  controller D gain
     // @Description: Optical flow controller D gain.
     // @Range: 0.0 0.02
     // @Increment: 0.001
     // @User: Standard
 
-    // @Param: OPTFL_FF
+    // @Param: OPTFLX_FF
     // @DisplayName: Optical flow controller feed forward
     // @Description: Optical flow controller feed forward
     // @Range: 0 0.5
     // @Increment: 0.001
     // @User: Standard
 
-    // @Param: OPTFL_FILT
+    // @Param: OPTFLX_FILT
     // @DisplayName: Optical flow controller input frequency in Hz
     // @Description: Optical flow controller input frequency in Hz
     // @Range: 1 100
     // @Increment: 1
     // @Units: Hz
     // @User: Standard
-    AP_SUBGROUPINFO(_pid_optfl, "_OPTFL_", 6, AC_PosControl_Sub, AC_PID),
+    AP_SUBGROUPINFO(_pid_optflx, "_OPTFLX_", 6, AC_PosControl_Sub, AC_PID),
 
     AP_GROUPEND
 };
@@ -178,7 +178,7 @@ AC_PosControl_Sub::AC_PosControl_Sub(const AP_AHRS_View& ahrs, const AP_Inertial
     _pid_vel_dist(POSCONTROL_DIST_VEL_P, POSCONTROL_DIST_VEL_I, POSCONTROL_DIST_VEL_D, POSCONTROL_DIST_VEL_IMAX, POSCONTROL_DIST_VEL_FILT_HZ, POSCONTROL_DIST_VEL_DT),
     _p_pos_dist(POSCONTROL_DIST_P),
     _pid_mesh_cnt(POSCONTROL_MESH_CNT_P, POSCONTROL_MESH_CNT_I, POSCONTROL_MESH_CNT_D, POSCONTROL_MESH_CNT_IMAX, POSCONTROL_MESH_CNT_FILT_HZ, POSCONTROL_MESH_CNT_DT),
-    _pid_optfl(POSCONTROL_OPTFL_P, POSCONTROL_OPTFL_I, POSCONTROL_OPTFL_D, POSCONTROL_OPTFL_IMAX, POSCONTROL_OPTFL_FILT_HZ, POSCONTROL_OPTFL_DT)
+    _pid_optflx(POSCONTROL_OPTFLX_P, POSCONTROL_OPTFLX_I, POSCONTROL_OPTFLX_D, POSCONTROL_OPTFLX_IMAX, POSCONTROL_OPTFLX_FILT_HZ, POSCONTROL_OPTFLX_DT)
 {}
 
 /// set_alt_target_from_climb_rate - adjusts target up or down using a climb rate in cm/s
@@ -279,7 +279,7 @@ void AC_PosControl_Sub::relax_alt_hold_controllers()
     _flags.reset_accel_to_throttle = true;
 }
 
-void AC_PosControl_Sub::update_dist_controller(float& target_forward, float cur_dist, float desired_dist, float dt, bool update)
+void AC_PosControl_Sub::update_dist_controller(float& target_forward, float cur_dist, float target_dist, float dt, bool update)
 {
     // simple pid controller for distance control
     // todo: check if useful to use implemented xy-position controller
@@ -288,7 +288,7 @@ void AC_PosControl_Sub::update_dist_controller(float& target_forward, float cur_
     if (update)
     {
         // distance error
-        float dist_error = desired_dist - cur_dist;
+        float dist_error = target_dist - cur_dist;
 
         // leash
         dist_error = constrain_float(dist_error, -_leash_dist, _leash_dist);
@@ -363,26 +363,32 @@ void AC_PosControl_Sub::update_mesh_cnt_controller(float& target_forward, float 
 }
 
 
-void AC_PosControl_Sub::update_optfl_controller(float& target_lateral, float optfl_error, float dt, bool update)
+void AC_PosControl_Sub::update_optfl_controller(float& target_lateral, float cur_optflx, float target_optflx, float dt, bool update)
 {
+    //debug output
+    gcs().send_named_float("velx", cur_optflx);
+    gcs().send_named_float("d_velx", target_optflx);
+
+    //optical flow error
+    float optflx_error = target_optflx - cur_optflx;
+
     // simple pid controller for optfl control
     float p, i, d;
 
     if (update)
     {
-        _pid_optfl.set_dt(dt);
-        _pid_optfl.set_input_filter_all(optfl_error);
+        _pid_optflx.set_dt(dt);
+        _pid_optflx.set_input_filter_all(optflx_error);
     }
 
     // probably better to use square root constrain
-    p = _pid_optfl.get_p();
-    p = constrain_float(p, -POSCONTROL_OPTFL_PMAX, POSCONTROL_OPTFL_PMAX);
+    p = _pid_optflx.get_p();
 
     // get i term
-    i = _pid_optfl.get_i();
+    i = _pid_optflx.get_i();
 
     // get d term
-    d = _pid_optfl.get_d();
+    d = _pid_optflx.get_d();
 
     target_lateral = p + i + d;
 
