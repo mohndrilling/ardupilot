@@ -220,13 +220,6 @@ void AP_NetTracking::scan(float &forward_out, float &lateral_out, float &throttl
 
 void AP_NetTracking::update_lateral_out(float &lateral_out)
 {
-    // scale net tracking velocity proportional to yaw error
-//        float ls_tmp = target_yaw_error / 2000.0f;
-//        float lat_scale_f = ls_tmp * ls_tmp * ls_tmp; // ... to be beautified
-
-//        // set commands for lateral motion
-//        lateral_out = (1.0f + lat_scale_f) * _nettr_velocity / 100.0f;
-
     // update phase shift input
     if (_sensor_updates.pc_updated)
         update_phase_shift();
@@ -234,25 +227,16 @@ void AP_NetTracking::update_lateral_out(float &lateral_out)
     // update net tracking velocity
     if (_velocity_ctrl)
     {
-        // call controller to hold desired lateral velocity
-        // interprete phase shift as optical flow by calculating derivation
-        float d_optfl_x = _nettr_direction * _tracking_velocity; // factor needed to scale to reasonable optical flow setpoint
-        float optfl_x_error;
-        if (fabs(_sensor_intervals.pc_dt) > 0.0f)
+        // perform optical flow stabilization if measurements arrived
+        if (_sensor_updates.pc_updated && fabs(_sensor_intervals.pc_dt) > 0.0f)
         {
-            optfl_x_error = d_optfl_x - _stereo_vision.get_cur_transl_shift().x / _sensor_intervals.pc_dt;
+            // negate the derivation since ardusub and phasecorr coordinate systems are flipped (z-axis in opposite directions)
+            float cur_optfl_x = -_stereo_vision.get_cur_transl_shift().x / _sensor_intervals.pc_dt;
+
+            // scale the target tracking velocity to obtain a reasonable optical flow setpoint
+            float target_optfl_x = 3.0f * _nettr_direction * _tracking_velocity;
+            _pos_control.update_optfl_controller(_nettr_velocity, cur_optfl_x, target_optfl_x, _sensor_intervals.pc_dt, _sensor_updates.pc_updated);
         }
-        else
-        {
-            optfl_x_error = 0.0f; // no opt flow information available
-        }
-
-        // get forward command from mesh count controller
-        _pos_control.update_optfl_controller(_nettr_velocity, optfl_x_error, _sensor_intervals.pc_dt, _sensor_updates.pc_updated);
-
-        gcs().send_named_float("lat_out", _nettr_velocity);
-        gcs().send_named_float("optf_err", optfl_x_error);
-
     }
     else
     {

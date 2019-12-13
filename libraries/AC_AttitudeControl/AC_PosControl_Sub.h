@@ -25,13 +25,12 @@
 # define POSCONTROL_MESH_CNT_PMAX                 0.08f   // mesh controller PMAX gain default
 
 // optfl lateral controller default definitions
-# define POSCONTROL_OPTFL_P                      0.0f   // opt flow controller P gain default
-# define POSCONTROL_OPTFL_I                      10.0f    // opt flow controller I gain default
-# define POSCONTROL_OPTFL_D                      0.0f    // opt flow controller D gain default
-# define POSCONTROL_OPTFL_IMAX                   50.0f  // opt flow controller IMAX gain default
-# define POSCONTROL_OPTFL_FILT_HZ                0.0f   // opt flow controller input filter default
-# define POSCONTROL_OPTFL_DT                     0.01f   // opt flow controller dt default
-# define POSCONTROL_OPTFL_PMAX                   20.0f   // opt flow controller PMAX gain default
+# define POSCONTROL_OPTFLX_P                      1.0f   // opt flow controller P gain default
+# define POSCONTROL_OPTFLX_I                      3.0f    // opt flow controller I gain default
+# define POSCONTROL_OPTFLX_D                      0.0f    // opt flow controller D gain default
+# define POSCONTROL_OPTFLX_IMAX                   15.0f  // opt flow controller IMAX gain default
+# define POSCONTROL_OPTFLX_FILT_HZ                20.0f   // opt flow controller input filter default
+# define POSCONTROL_OPTFLX_DT                     0.01f   // opt flow controller dt default
 
 class AC_PosControl_Sub : public AC_PosControl {
 public:
@@ -72,16 +71,16 @@ public:
     void relax_alt_hold_controllers();
 
     /// control distance to net
-    void update_dist_controller(float& target_forward, float cur_dist, float desired_dist, float dt, bool update);
+    void update_dist_controller(float& target_forward, float cur_dist, float target_dist, float dt, bool update);
 
     /// control currently visible net meshes
     void update_mesh_cnt_controller(float& target_forward, float mesh_cnt_error, float dt, bool update);
 
     /// control lateral velocity based on optical flow input error
-    void update_optfl_controller(float& target_lateral, float optfl_error, float dt, bool update);
+    void update_optfl_controller(float& target_lateral, float cur_optflx, float target_optflx, float dt, bool update);
 
     /// reset the integrator of the optical flow controller
-    void relax_optfl_controller() { _pid_optfl.reset_I(); }
+    void relax_optfl_controller() { _pid_optflx.reset_I(); }
 
     // user settable parameters
     static const struct AP_Param::GroupInfo var_info[];
@@ -104,7 +103,6 @@ private:
 
     AC_PID      _pid_mesh_cnt; // mesh_cnt controller
 
-    AC_PID      _pid_optfl; // opt_flow controller
-
+    AC_PID      _pid_optflx; // opt_flow pid controller
 
 };

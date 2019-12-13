@@ -37,7 +37,8 @@ public:
                     _state(State::Scanning),
                     _perform_att_ctrl(false),
                     _phase_shift_filt(AP_NETTRACKING_PHASE_SHIFT_CUTOFF_FREQ_DEFAULT),
-                    _loop_progress(-1)
+                    _loop_progress(-1),
+                    _nettr_velocity(0.0f)
     {
         AP_Param::setup_object_defaults(this, var_info);
     }
