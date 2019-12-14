@@ -148,8 +148,8 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
         case State::Throttle:
 
             update_forward_out(forward_out);
+            update_lateral_out(lateral_out);
             update_heading_control();
-            lateral_out = 0.0f;
             update_throttle_out(throttle_out);
             break;
 
@@ -171,9 +171,6 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
         {
             // continue performing distance and heading control
             scan(forward_out, lateral_out, throttle_out);
-
-            // overwrite lateral out
-            lateral_out = 0.0f;
 
             // overwrite throttle
             // constant throttling towards home altitude
@@ -233,14 +230,26 @@ void AP_NetTracking::update_lateral_out(float &lateral_out)
             // negate the derivation since ardusub and phasecorr coordinate systems are flipped (z-axis in opposite directions)
             float cur_optfl_x = -_stereo_vision.get_cur_transl_shift().x / _sensor_intervals.pc_dt;
 
-            // scale the target tracking velocity to obtain a reasonable optical flow setpoint
-            float target_optfl_x = 3.0f * _nettr_direction * _tracking_velocity;
+            // target optical flow velocity, only different from zero during net tracking
+            float target_optfl_x = 0.0f;
+            if (_state == State::Scanning || _state == State::ReturnToHomeHeading)
+            {
+                // scale the target tracking velocity to obtain a reasonable optical flow setpoint
+                target_optfl_x = 3.0f * _nettr_direction * _tracking_velocity;
+            }
             _pos_control.update_optfl_controller(_nettr_velocity, cur_optfl_x, target_optfl_x, _sensor_intervals.pc_dt, _sensor_updates.pc_updated);
         }
     }
     else
     {
-        _nettr_velocity = _nettr_direction * _tracking_velocity;
+        if (_state == State::Scanning || _state == State::ReturnToHomeHeading)
+        {
+            _nettr_velocity = _nettr_direction * _tracking_velocity;
+        }
+        else
+        {
+            _nettr_velocity = 0.0f;
+        }
     }
 
     // scale to lateral_out command
