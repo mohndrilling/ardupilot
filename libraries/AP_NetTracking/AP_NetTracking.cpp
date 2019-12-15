@@ -31,9 +31,9 @@ const AP_Param::GroupInfo AP_NetTracking::var_info[] = {
     AP_GROUPINFO("MESH_CNT", 2, AP_NetTracking, _tracking_meshcount, AP_NETTRACKING_MESH_CNT_DEFAULT),
 
     // @Param: VEL
-    // @DisplayName: Desired lateral velocity during net tracking
-    // @Description: Desired lateral velocity during net tracking
-    // @Units: cm/s
+    // @DisplayName: Desired lateral velocity during net tracking in percent
+    // @Description: Desired lateral velocity during net tracking in percent
+    // @Units: percent
     // @Range: -100.0 100.0
     // @Increment: 1
     // @User: Advanced
@@ -235,7 +235,7 @@ void AP_NetTracking::update_lateral_out(float &lateral_out)
             if (_state == State::Scanning || _state == State::ReturnToHomeHeading)
             {
                 // scale the target tracking velocity to obtain a reasonable optical flow setpoint
-                target_optfl_x = 3.0f * _nettr_direction * _tracking_velocity;
+                target_optfl_x = _nettr_direction * _tracking_velocity * _nettr_opt_flow_vel_factor;
             }
             _pos_control.update_optfl_controller(_nettr_velocity, cur_optfl_x, target_optfl_x, _sensor_intervals.pc_dt, _sensor_updates.pc_updated);
         }
@@ -244,7 +244,7 @@ void AP_NetTracking::update_lateral_out(float &lateral_out)
     {
         if (_state == State::Scanning || _state == State::ReturnToHomeHeading)
         {
-            _nettr_velocity = _nettr_direction * _tracking_velocity;
+            _nettr_velocity = _nettr_direction * _tracking_velocity * _nettr_default_vel_factor;
         }
         else
         {
