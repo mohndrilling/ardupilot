@@ -15,6 +15,8 @@
 #define AP_NETTRACKING_DISTANCE_DEFAULT 50
 #define AP_NETTRACKING_MESH_CNT_DEFAULT 200
 #define AP_NETTRACKING_VELOCITY_DEFAULT 0.0f
+#define AP_NETTRACKING_OPTFLOW_VELOCITY_FACTOR 2.0f
+#define AP_NETTRACKING_DEFAULT_VELOCITY_FACTOR 0.8f
 #define AP_NETTRACKING_CTRL_VAR_DEFAULT ControlVar::ctrl_distance
 #define AP_NETTRACKING_VEL_CTRL_DEFAULT 1
 #define AP_NETTRACKING_THR_SPEED_DEFAULT 0.05f
@@ -38,7 +40,9 @@ public:
                     _perform_att_ctrl(false),
                     _phase_shift_filt(AP_NETTRACKING_PHASE_SHIFT_CUTOFF_FREQ_DEFAULT),
                     _loop_progress(-1),
-                    _nettr_velocity(0.0f)
+                    _nettr_velocity(0.0f),
+                    _nettr_default_vel_factor(AP_NETTRACKING_DEFAULT_VELOCITY_FACTOR),
+                    _nettr_opt_flow_vel_factor(AP_NETTRACKING_OPTFLOW_VELOCITY_FACTOR)
     {
         AP_Param::setup_object_defaults(this, var_info);
     }
@@ -157,6 +161,8 @@ protected:
     float _nettr_velocity;
     bool _nettr_toggle_velocity = false;
     float _nettr_direction = 1.0f;
+    float _nettr_default_vel_factor;
+    float _nettr_opt_flow_vel_factor;
 
     float _phase_shift_sum_x;
     float _phase_shift_sum_y;
