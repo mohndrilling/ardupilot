@@ -133,11 +133,11 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
             // perform distance control
             update_forward_out(forward_out);
 
+            // perform opical flow stabilization
+            update_lateral_out(lateral_out);
+
             // keep altitude
             throttle_out = 0.0f;
-
-            // no lateral moving
-            lateral_out = 0.0f;
 
             break;
 
