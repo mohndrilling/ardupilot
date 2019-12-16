@@ -312,6 +312,7 @@ void AC_PosControl_Sub::update_dist_controller(float& target_forward, float cur_
         _pid_vel_dist.set_input_filter_all(- vel_dist_error);
 
         // debugging output
+        gcs().send_named_float("d_dst", target_dist);
         gcs().send_named_float("dst", cur_dist);
         gcs().send_named_float("dstvel", cur_vel_dist);
         gcs().send_named_float("d_dstvel", vel_dist_target);
