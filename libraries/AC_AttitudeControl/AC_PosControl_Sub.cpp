@@ -377,11 +377,7 @@ void AC_PosControl_Sub::update_optfl_controller(float& target_lateral, float cur
     // set the cutoff frequency of the motors lateral input filter
     _motors.set_lateral_filter_cutoff(POSCONTROL_LATERAL_CUTOFF_FREQ);
 
-    // debugging output
-    if (AP_HAL::millis() - _last_debug_optflx_ms > 200)
-    {
-        gcs().send_named_float("optflx", cur_optflx);
-        gcs().send_named_float("d_optflx", target_optflx);
-        _last_debug_optflx_ms = AP_HAL::millis();
-    }
+    //debug output
+    gcs().send_named_float("optflx", cur_optflx);
+    gcs().send_named_float("d_optflx", target_optflx);
 }
