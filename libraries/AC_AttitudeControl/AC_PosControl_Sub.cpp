@@ -366,10 +366,6 @@ void AC_PosControl_Sub::update_mesh_cnt_controller(float& target_forward, float 
 
 void AC_PosControl_Sub::update_optfl_controller(float& target_lateral, float cur_optflx, float target_optflx, float dt, bool update)
 {
-    //debug output
-    gcs().send_named_float("velx", cur_optflx);
-    gcs().send_named_float("d_velx", target_optflx);
-
     //optical flow error
     float optflx_error = target_optflx - cur_optflx;
 
@@ -395,4 +391,8 @@ void AC_PosControl_Sub::update_optfl_controller(float& target_lateral, float cur
 
     // set the cutoff frequency of the motors lateral input filter
     _motors.set_lateral_filter_cutoff(POSCONTROL_LATERAL_CUTOFF_FREQ);
+
+    //debug output
+    gcs().send_named_float("optflx", cur_optflx);
+    gcs().send_named_float("d_optflx", target_optflx);
 }
