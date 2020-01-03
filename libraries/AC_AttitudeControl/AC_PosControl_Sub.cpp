@@ -51,7 +51,7 @@ const AP_Param::GroupInfo AC_PosControl_Sub::var_info[] = {
     // @User: Standard
     AP_SUBGROUPINFO(_pid_vel_dist, "_VELDST_", 1, AC_PosControl_Sub, AC_PID),
 
-    // @Param: _POSDST_
+    // @Param: _POSDST_P
     // @DisplayName: Distance controller P gain
     // @Description: Distance controller P gain.  Converts distance error to target velocity
     // @Range: 0.500 2.000
@@ -76,50 +76,75 @@ const AP_Param::GroupInfo AC_PosControl_Sub::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("_DST_LEASH", 4, AC_PosControl_Sub, _leash_dist, POSCONTROL_DIST_LEASH_LENGTH),
 
-    // @Param: MSH_CNT_P
-    // @DisplayName: Mesh count controller P gain
-    // @Description: Mesh count controller P gain.
+    // @Param: MSH_VEL_P
+    // @DisplayName: Mesh count velocity controller P gain
+    // @Description: Mesh count velocity controller P gain.
     // @Range: 0.0 0.30
     // @Increment: 0.005
     // @User: Standard
 
-    // @Param: MSH_CNT_I
-    // @DisplayName: Mesh count controller I gain
-    // @Description: Mesh count controller I gain.
+    // @Param: MSH_VEL_I
+    // @DisplayName: Mesh count velocity controller I gain
+    // @Description: Mesh count velocity controller I gain.
     // @Range: 0.0 0.5
     // @Increment: 0.01
     // @User: Standard
 
-    // @Param: MSH_CNT_IMAX
-    // @DisplayName: Mesh count controller I gain maximum
-    // @Description: Mesh count controller I gain maximum.
+    // @Param: MSH_VEL_IMAX
+    // @DisplayName: Mesh count velocity controller I gain maximum
+    // @Description: Mesh count velocity controller I gain maximum.
     // @Range: 0 1
     // @Increment: 0.01
     // @Units: %
     // @User: Standard
 
-    // @Param: MSH_CNT_D
-    // @DisplayName: Mesh count controller D gain
-    // @Description: Mesh count controller D gain.
+    // @Param: MSH_VEL_D
+    // @DisplayName: Mesh count velocity controller D gain
+    // @Description: Mesh count velocity controller D gain.
     // @Range: 0.0 0.02
     // @Increment: 0.001
     // @User: Standard
 
-    // @Param: MSH_CNT_FF
-    // @DisplayName: Mesh count controller feed forward
-    // @Description: Mesh count controller feed forward
+    // @Param: MSH_VEL_FF
+    // @DisplayName: Mesh count velocity controller feed forward
+    // @Description: Mesh count velocity controller feed forward
     // @Range: 0 0.5
     // @Increment: 0.001
     // @User: Standard
 
-    // @Param: MSH_CNT_FILT
-    // @DisplayName: Mesh count controller input frequency in Hz
-    // @Description: Mesh count controller input frequency in Hz
+    // @Param: MSH_VEL_FILT
+    // @DisplayName: Mesh count velocity controller input frequency in Hz
+    // @Description: Mesh count velocity controller input frequency in Hz
     // @Range: 1 100
     // @Increment: 1
     // @Units: Hz
     // @User: Standard
-    AP_SUBGROUPINFO(_pid_mesh_cnt, "_MSH_CNT_", 5, AC_PosControl_Sub, AC_PID),
+    AP_SUBGROUPINFO(_pid_mesh_vel, "_MSH_VEL_", 5, AC_PosControl_Sub, AC_PID),
+
+    // @Param: _MSH_CNT_P
+    // @DisplayName: Distance controller P gain
+    // @Description: Distance controller P gain.  Converts mesh count error to target velocity
+    // @Range: 0.500 2.000
+    // @User: Standard
+    AP_SUBGROUPINFO(_p_mesh_cnt, "_MSH_CNT_", 6, AC_PosControl_Sub, AC_P),
+
+    // @Param: _DMSH_FILT
+    // @DisplayName: Low pass filter of the derivation of the current mesh count
+    // @Description: Low pass filter of the derivation of the current mesh count
+    // @Units: Hz
+    // @Range: 0.5 5
+    // @Increment: 0.1
+    // @User: Advanced
+    AP_GROUPINFO("_DMSH_FILT", 7, AC_PosControl_Sub, _mesh_cnt_vel_filter_cutoff, POSCONTROL_MESH_CNT_DERIVATION_FILTER_HZ),
+
+    // @Param: _MSH_LEASH
+    // @DisplayName: Maximum value of the mesh count error during net tracking
+    // @Description: Maximum value of the mesh count error during net tracking
+    // @Units: Hz
+    // @Range: 0.5 5
+    // @Increment: 0.1
+    // @User: Advanced
+    AP_GROUPINFO("_MSH_LEASH", 8, AC_PosControl_Sub, _leash_mesh_cnt, POSCONTROL_MESH_CNT_LEASH_LENGTH),
 
     // @Param: OPTFLX_P
     // @DisplayName: Optical flow controller P gain
@@ -164,7 +189,7 @@ const AP_Param::GroupInfo AC_PosControl_Sub::var_info[] = {
     // @Increment: 1
     // @Units: Hz
     // @User: Standard
-    AP_SUBGROUPINFO(_pid_optflx, "_OPTFLX_", 6, AC_PosControl_Sub, AC_PID),
+    AP_SUBGROUPINFO(_pid_optflx, "_OPTFLX_", 9, AC_PosControl_Sub, AC_PID),
 
     AP_GROUPEND
 };
@@ -177,7 +202,9 @@ AC_PosControl_Sub::AC_PosControl_Sub(const AP_AHRS_View& ahrs, const AP_Inertial
     _dist_last(0.0f),
     _pid_vel_dist(POSCONTROL_DIST_VEL_P, POSCONTROL_DIST_VEL_I, POSCONTROL_DIST_VEL_D, POSCONTROL_DIST_VEL_IMAX, POSCONTROL_DIST_VEL_FILT_HZ, POSCONTROL_DIST_VEL_DT),
     _p_pos_dist(POSCONTROL_DIST_P),
-    _pid_mesh_cnt(POSCONTROL_MESH_CNT_P, POSCONTROL_MESH_CNT_I, POSCONTROL_MESH_CNT_D, POSCONTROL_MESH_CNT_IMAX, POSCONTROL_MESH_CNT_FILT_HZ, POSCONTROL_MESH_CNT_DT),
+    _mesh_cnt_last(0.0f),
+    _pid_mesh_vel(POSCONTROL_MESH_CNT_VEL_P, POSCONTROL_MESH_CNT_VEL_I, POSCONTROL_MESH_CNT_VEL_D, POSCONTROL_MESH_CNT_VEL_IMAX, POSCONTROL_MESH_CNT_VEL_FILT_HZ, POSCONTROL_MESH_CNT_VEL_DT),
+    _p_mesh_cnt(POSCONTROL_MESH_CNT_P),
     _pid_optflx(POSCONTROL_OPTFLX_P, POSCONTROL_OPTFLX_I, POSCONTROL_OPTFLX_D, POSCONTROL_OPTFLX_IMAX, POSCONTROL_OPTFLX_FILT_HZ, POSCONTROL_OPTFLX_DT)
 {}
 
@@ -318,8 +345,6 @@ void AC_PosControl_Sub::update_dist_controller(float& target_forward, float cur_
         gcs().send_named_float("d_dstvel", vel_dist_target);
     }
 
-    // separately calculate p, i, d values for logging
-    // probably better to use square root constrain
     p = _pid_vel_dist.get_p();
 
     // get i term
@@ -334,28 +359,52 @@ void AC_PosControl_Sub::update_dist_controller(float& target_forward, float cur_
     _motors.set_forward_filter_cutoff(POSCONTROL_FORWARD_CUTOFF_FREQ);
 }
 
-void AC_PosControl_Sub::update_mesh_cnt_controller(float& target_forward, float mesh_cnt_error, float dt, bool update)
+void AC_PosControl_Sub::update_mesh_cnt_controller(float& target_forward, float cur_mesh_cnt, float target_mesh_cnt, float dt, bool update)
 {
-    // simple pid controller for distance control
-    // todo: check if useful to use implemented xy-position controller
     float p, i, d;
 
     if (update)
-    {
-        _pid_mesh_cnt.set_dt(dt);
-        _pid_mesh_cnt.set_input_filter_all(mesh_cnt_error);
+    {        
+        // we control the square root of current mesh count, since total meshcount grows quadratically over the distance to the net
+        // but we want a linear dependency between control input (forward throttle) and control variable (square root mesh count)
+        // mesh count error
+        float mesh_cnt_error = safe_sqrt(target_mesh_cnt) - safe_sqrt(cur_mesh_cnt);
+
+        // leash
+        mesh_cnt_error = constrain_float(mesh_cnt_error, -_leash_mesh_cnt, _leash_mesh_cnt);
+
+        // target velocity
+        // TODO: use square root controller
+        // TODO: constrain target velocity?
+        float mesh_cnt_vel_target = _p_mesh_cnt.get_p(mesh_cnt_error);
+
+        // calculate derivation of mesh count course
+        _mesh_cnt_vel_filter.set_cutoff_frequency(_mesh_cnt_vel_filter_cutoff);
+        float cur_mesh_cnt_vel = _mesh_cnt_vel_filter.apply((cur_mesh_cnt - _mesh_cnt_last) / dt, dt);
+        _mesh_cnt_last = cur_mesh_cnt;
+
+        // velocity error
+        float vel_dist_error = mesh_cnt_vel_target - cur_mesh_cnt_vel;
+
+        // update pid controller
+        // negate pid input, as positive distance error requires negative motor input (backwards driving) and vice versa
+        _pid_mesh_vel.set_dt(dt);
+        _pid_mesh_vel.set_input_filter_all(- vel_dist_error);
+
+        // debugging output
+        gcs().send_named_float("d_mshcnt", target_mesh_cnt);
+        gcs().send_named_float("mshcnt", cur_mesh_cnt);
+        gcs().send_named_float("mshvel", cur_mesh_cnt_vel);
+        gcs().send_named_float("d_mshvel", mesh_cnt_vel_target);
     }
 
-    // separately calculate p, i, d values for logging
-    // probably better to use square root constrain
-    p = _pid_mesh_cnt.get_p();
-    p = constrain_float(p, -POSCONTROL_MESH_CNT_PMAX, POSCONTROL_MESH_CNT_PMAX);
+    p = _pid_mesh_vel.get_p();
 
     // get i term
-    i = _pid_mesh_cnt.get_i();
+    i = _pid_mesh_vel.get_i();
 
     // get d term
-    d = _pid_mesh_cnt.get_d();
+    d = _pid_mesh_vel.get_d();
 
     target_forward = p + i + d;
 

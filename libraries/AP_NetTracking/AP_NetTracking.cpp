@@ -308,21 +308,24 @@ void AP_NetTracking::update_forward_out(float &forward_out)
     bool update_target = _control_var == ctrl_meshcount ? _sensor_updates.ni_updated : _sensor_updates.stv_updated;
     float dt = _control_var == ctrl_meshcount ? _sensor_intervals.ni_dt : _sensor_intervals.stv_dt;
 
+    if (dt <= 0)
+    {
+        forward_out = 0.0f;
+        return;
+    }
+
     if (_control_var == ctrl_meshcount)
     {
         // retrieve amount of currently visible net meshes
         float cur_mesh_cnt = (float) _stereo_vision.get_mesh_count();
 
-
-        // desired mesh count (control the square root of current mesh count, since total meshcount grows quadratically over the distance to the net)
-        // but we want a linear dependency between control input (forward throttle) and control variable (square rooted mesh count)
         float d_mesh_cnt = _tracking_meshcount;
-        float mesh_cnt_error = safe_sqrt(cur_mesh_cnt) - safe_sqrt(float(d_mesh_cnt));
 
         // get forward command from mesh count controller
-        _pos_control.update_mesh_cnt_controller(forward_out, mesh_cnt_error, dt, update_target);
+        _pos_control.update_mesh_cnt_controller(forward_out, cur_mesh_cnt, d_mesh_cnt, dt, update_target);
 
-        _perform_att_ctrl = abs(mesh_cnt_error) < 5.0f;
+        // mesh count error < 5.0, using square root to get linear dependency between mesh count error and distance from net
+        _perform_att_ctrl = abs(safe_sqrt(d_mesh_cnt) - safe_sqrt(cur_mesh_cnt)) < 5.0f;
 
     }
     else
