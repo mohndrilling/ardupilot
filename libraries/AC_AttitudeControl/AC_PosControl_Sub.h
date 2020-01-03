@@ -16,13 +16,17 @@
 #define POSCONTROL_DIST_LEASH_LENGTH              0.5f  // maximum distance error in m
 
 // mesh count controller default definitions
-# define POSCONTROL_MESH_CNT_P                    0.02f   // mesh controller P gain default
-# define POSCONTROL_MESH_CNT_I                    0.5f    // mesh controller I gain default
-# define POSCONTROL_MESH_CNT_D                    0.0f    // mesh controller D gain default
-# define POSCONTROL_MESH_CNT_IMAX                 0.001f  // mesh controller IMAX gain default
-# define POSCONTROL_MESH_CNT_FILT_HZ              10.0f   // mesh controller input filter default
-# define POSCONTROL_MESH_CNT_DT                   0.01f   // mesh controller dt default
-# define POSCONTROL_MESH_CNT_PMAX                 0.08f   // mesh controller PMAX gain default
+# define POSCONTROL_MESH_CNT_VEL_P                0.003f   // mesh controller P gain default
+# define POSCONTROL_MESH_CNT_VEL_I                0.1f    // mesh controller I gain default
+# define POSCONTROL_MESH_CNT_VEL_D                0.0f    // mesh controller D gain default
+# define POSCONTROL_MESH_CNT_VEL_IMAX             0.1f  // mesh controller IMAX gain default
+# define POSCONTROL_MESH_CNT_VEL_FILT_HZ          10.0f   // mesh controller input filter default
+# define POSCONTROL_MESH_CNT_VEL_DT               0.01f   // mesh controller dt default
+# define POSCONTROL_MESH_CNT_P                    21.0f   // mesh controller mesh count to derivative gain
+
+#define POSCONTROL_MESH_CNT_DERIVATION_FILTER_HZ  2.0f // low pass filter cutoff frequency for first distance derivation (velocity)
+
+#define POSCONTROL_MESH_CNT_LEASH_LENGTH          10.0f  // maximum distance error in m
 
 // optfl lateral controller default definitions
 # define POSCONTROL_OPTFLX_P                      1.0f   // opt flow controller P gain default
@@ -74,7 +78,7 @@ public:
     void update_dist_controller(float& target_forward, float cur_dist, float target_dist, float dt, bool update);
 
     /// control currently visible net meshes
-    void update_mesh_cnt_controller(float& target_forward, float mesh_cnt_error, float dt, bool update);
+    void update_mesh_cnt_controller(float& target_forward, float cur_mesh_cnt, float target_mesh_cnt, float dt, bool update);
 
     /// control lateral velocity based on optical flow input error
     void update_optfl_controller(float& target_lateral, float cur_optflx, float target_optflx, float dt, bool update);
@@ -100,9 +104,18 @@ private:
     AC_PID      _pid_vel_dist; // distance controller
     AC_P        _p_pos_dist;     // dist_error to velocity gain
 
+    // mesh count controller internal variables
+    float       _mesh_cnt_last;             // last mesh count measurement, needed for derivation during nettracking
+    AP_Float    _leash_mesh_cnt;            // constrains mesh count error
 
-    AC_PID      _pid_mesh_cnt; // mesh_cnt controller
+    LowPassFilterFloat _mesh_cnt_vel_filter;   // low-pass-filter on derivative of mesh count (proportional to relative velocity w.r.t. net)
 
+    AP_Float _mesh_cnt_vel_filter_cutoff;       // mesh count velocity filter cutoff frequency
+
+    AC_PID      _pid_mesh_vel; // mesh count controller
+    AC_P        _p_mesh_cnt;   // gain between mesh count error and derivative mesh count
+
+    // optfl controller internal variables
     AC_PID      _pid_optflx; // opt_flow pid controller
 
 };
