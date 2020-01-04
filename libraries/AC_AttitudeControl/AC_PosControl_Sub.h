@@ -16,13 +16,13 @@
 #define POSCONTROL_DIST_LEASH_LENGTH              0.5f  // maximum distance error in m
 
 // mesh count controller default definitions
-# define POSCONTROL_MESH_CNT_VEL_P                0.003f   // mesh controller P gain default
+# define POSCONTROL_MESH_CNT_VEL_P                0.04f   // mesh controller P gain default
 # define POSCONTROL_MESH_CNT_VEL_I                0.1f    // mesh controller I gain default
 # define POSCONTROL_MESH_CNT_VEL_D                0.0f    // mesh controller D gain default
 # define POSCONTROL_MESH_CNT_VEL_IMAX             0.1f  // mesh controller IMAX gain default
 # define POSCONTROL_MESH_CNT_VEL_FILT_HZ          10.0f   // mesh controller input filter default
 # define POSCONTROL_MESH_CNT_VEL_DT               0.01f   // mesh controller dt default
-# define POSCONTROL_MESH_CNT_P                    21.0f   // mesh controller mesh count to derivative gain
+# define POSCONTROL_MESH_CNT_P                    0.6f   // mesh controller mesh count to derivative gain
 
 #define POSCONTROL_MESH_CNT_DERIVATION_FILTER_HZ  2.0f // low pass filter cutoff frequency for first distance derivation (velocity)
 
