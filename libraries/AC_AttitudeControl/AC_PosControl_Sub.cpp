@@ -380,7 +380,7 @@ void AC_PosControl_Sub::update_mesh_cnt_controller(float& target_forward, float 
 
         // calculate derivation of mesh count course
         _mesh_cnt_vel_filter.set_cutoff_frequency(_mesh_cnt_vel_filter_cutoff);
-        float cur_mesh_cnt_vel = _mesh_cnt_vel_filter.apply((cur_mesh_cnt - _mesh_cnt_last) / dt, dt);
+        float cur_mesh_cnt_vel = _mesh_cnt_vel_filter.apply((safe_sqrt(cur_mesh_cnt) - safe_sqrt(_mesh_cnt_last)) / dt, dt);
         _mesh_cnt_last = cur_mesh_cnt;
 
         // velocity error
