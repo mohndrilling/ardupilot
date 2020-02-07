@@ -133,6 +133,7 @@ protected:
         float stv_dt; // dt of stereo vision messages
         float ni_dt;  // dt of net inspection messages
         float pc_dt;  // dt of phase corr (image shift) messages
+        float md_dt;  // dt of marker detection messages
     };
 
     // stores whether each of the stereovision, image shift and net inspection modules holds new information
@@ -141,6 +142,7 @@ protected:
         bool stv_updated; // whether stereovision module has new data
         bool ni_updated;  // whether net inspection module has new data
         bool pc_updated;  // whether phase corr module has new data
+        bool md_updated;  // whether marker detection module has new data
     };
 
     // Parameters
@@ -157,6 +159,7 @@ protected:
     uint32_t _last_stereo_update_ms = 0;
     uint32_t _last_mesh_data_update_ms = 0;
     uint32_t _last_phase_corr_update_ms = 0;
+    uint32_t _last_marker_detection_update_ms = 0;
 
     float _nettr_velocity;
     bool _nettr_toggle_velocity = false;

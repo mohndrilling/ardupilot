@@ -98,6 +98,7 @@ void AP_NetTracking::init()
     _last_stereo_update_ms = _stereo_vision.get_last_stv_update_ms();
     _last_mesh_data_update_ms = _stereo_vision.get_last_ni_update_ms();
     _last_phase_corr_update_ms = _stereo_vision.get_last_pc_update_ms();
+    _last_marker_detection_update_ms = _stereo_vision.get_last_md_update_ms();
 
     // set initial state
     _state = State::Scanning;
@@ -109,6 +110,7 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
     _sensor_intervals.stv_dt = _stereo_vision.get_stv_time_delta_usec() / 1000000.0f; // stereo vision net tracking messages
     _sensor_intervals.ni_dt = _stereo_vision.get_ni_time_delta_usec() / 1000000.0f; // net inspection  messages
     _sensor_intervals.pc_dt = _stereo_vision.get_pc_time_delta_usec() / 1000000.0f; // phase correlation messages
+    _sensor_intervals.md_dt = _stereo_vision.get_md_time_delta_usec() / 1000000.0f; // marker detection messages
 
     if (_sensor_intervals.stv_dt > 2.0f)
     {
@@ -119,10 +121,12 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
     _sensor_updates.stv_updated = _stereo_vision.get_last_stv_update_ms() - _last_stereo_update_ms != 0;
     _sensor_updates.ni_updated = _stereo_vision.get_last_ni_update_ms() - _last_mesh_data_update_ms != 0;
     _sensor_updates.pc_updated = _stereo_vision.get_last_pc_update_ms() - _last_phase_corr_update_ms != 0;
+    _sensor_updates.md_updated = _stereo_vision.get_last_md_update_ms() - _last_marker_detection_update_ms != 0;
 
     _last_stereo_update_ms = _stereo_vision.get_last_stv_update_ms();
     _last_mesh_data_update_ms = _stereo_vision.get_last_ni_update_ms();
     _last_phase_corr_update_ms = _stereo_vision.get_last_pc_update_ms();
+    _last_marker_detection_update_ms = _stereo_vision.get_last_md_update_ms();
 
     switch (_state)
     {
@@ -304,7 +308,6 @@ void AP_NetTracking::update_lateral_out(float &lateral_out)
 
 void AP_NetTracking::update_forward_out(float &forward_out)
 {    
-
     bool update_target = _control_var == ctrl_meshcount ? _sensor_updates.ni_updated : _sensor_updates.stv_updated;
     float dt = _control_var == ctrl_meshcount ? _sensor_intervals.ni_dt : _sensor_intervals.stv_dt;
 
