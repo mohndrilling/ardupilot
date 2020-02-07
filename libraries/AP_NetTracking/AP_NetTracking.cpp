@@ -78,6 +78,13 @@ const AP_Param::GroupInfo AP_NetTracking::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("PH_CRR_DST", 8, AP_NetTracking, _phase_shift_thr_dist, AP_NETTRACKING_PHASE_SHIFT_THR_DIST_DEFAULT),
 
+    // @Param: OPT_MARKER
+    // @DisplayName: Whether to use a tape with optical markers to detect 360 degree loops
+    // @Description: Whether to use a tape with optical markers to detect 360 degree loops
+    // @Values: 0:Disabled 1:Enabled
+    // @User: Advanced
+    AP_GROUPINFO("OPT_MARKER", 9, AP_NetTracking, _use_optical_marker_termination, AP_NETTRACKING_USE_OPT_MARKER_DEFAULT),
+
     AP_GROUPEND
 };
 
@@ -166,7 +173,10 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
             float current_yaw = _ahrs.get_current_yaw();
 
             if (fabs(_home_yaw - current_yaw) < radians(3.0f))
+            {
+                gcs().send_text(MAV_SEVERITY_INFO, "Returning to Home Altitude");
                 _state = State::ReturnToHomeAltitude;
+            }
 
             break;
         }
@@ -183,7 +193,10 @@ void AP_NetTracking::perform_net_tracking(float &forward_out, float &lateral_out
 
             // check termination condition
             if (fabs(_inav.get_altitude() - _home_altitude) < 5.0f)
+            {
+                gcs().send_text(MAV_SEVERITY_INFO, "Reached Home Position. Pausing...");
                 _state = State::Pause;
+            }
 
             break;
         }
@@ -278,6 +291,7 @@ void AP_NetTracking::update_lateral_out(float &lateral_out)
             _pos_control.relax_optfl_controller();
 
             // switch to Throttle state and store the current absolute phase shift y distance to track the distance that the image is traveling during throttle state
+            gcs().send_text(MAV_SEVERITY_INFO, "Changing to Throttle");
             _state = State::Throttle;
             _initial_phase_shift_sumy = _phase_shift_sum_y;
         }
@@ -288,21 +302,53 @@ void AP_NetTracking::update_lateral_out(float &lateral_out)
 
         // check if ROV has performed 360 degrees of scanning
         gcs().send_named_float("dyaw", fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw));
-        if (fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) > 360.0f)
+
+        if (detect_loop_closure())
         {
-            gcs().send_text(MAV_SEVERITY_INFO, "Changing to Throttle");
+            // reset yaw error low pass filter to avoid overshooting
+            _attitude_control.reset_yaw_err_filter();
+
             // toggle scanning direction
             _nettr_direction *= -1;
 
-            _attitude_control.reset_yaw_err_filter();
-
-            // switch to Throttle state and store the current absolute opt flow y distance to track the distance that the image is traveling during throttle state
-            _state = State::Throttle;
-            _initial_phase_shift_sumy = _phase_shift_sum_y;
-
             // reset loop progress
             _loop_progress = -1;
+
+            if (_use_optical_marker_termination && _terminate)
+            {
+                // Terminate net tracking, return to home
+                gcs().send_text(MAV_SEVERITY_INFO, "Scanning done. Returning to Home Position...");
+                _state = State::ReturnToHomeAltitude;
+            }
+            else
+            {
+                // switch to Throttle state and store the current absolute opt flow y distance to track the distance that the image is traveling during throttle state
+                gcs().send_text(MAV_SEVERITY_INFO, "Changing to Throttle");
+                _state = State::Throttle;
+                _initial_phase_shift_sumy = _phase_shift_sum_y;
+            }
         }
+    }
+}
+
+bool AP_NetTracking::detect_loop_closure()
+{
+    if (_use_optical_marker_termination)
+    {
+        // a visible marker indicates, that the ROV is at the starting (home) position of each loop
+        // This function shall only return true if the ROV has performed a full scanning loop.
+        // As markers are still visible right after starting a loop, we check for the yaw angle of the ROV
+        // of having exceeded a certain minimum angle since start of the last loop
+        if(fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) < 90.0f)
+            return false;
+
+        else
+            return _stereo_vision.marker_visible();
+    }
+    else
+    {
+        // detect loop closure by elapsed yaw angle (prone to measurement drifts)
+        return fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) > 360.0f;
     }
 }
 
@@ -379,8 +425,15 @@ void AP_NetTracking::update_throttle_out(float &throttle_out)
     {
         _initial_yaw = _attitude_control.get_accumulated_yaw();
         _state = State::Scanning;
+        gcs().send_text(MAV_SEVERITY_INFO, "Changing to Scanning");
     }
 
+    // net tracking will be terminated after the next loop, if a marker tape is used and a termination marker is detected
+    if (_use_optical_marker_termination && !_terminate && _stereo_vision.marker_terminate())
+    {
+        gcs().send_text(MAV_SEVERITY_INFO, "Termination marker detected");
+        _terminate = true;
+    }
 }
 
 void AP_NetTracking::update_phase_shift()
@@ -422,5 +475,6 @@ void AP_NetTracking::set_return_home()
     // in case of a closed net shape (fish farm), ROV continues scanning until initial heading reached, then throttles to initial altitude
     // in case of plane net shape, ROV directly throttles to initial altitude
     _state = _net_shape == NetShape::Tube ? State::ReturnToHomeHeading : State::ReturnToHomeAltitude;
+    gcs().send_text(MAV_SEVERITY_INFO, "Returning to Home");
 }
 
