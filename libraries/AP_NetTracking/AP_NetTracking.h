@@ -60,9 +60,7 @@ public:
     void perform_net_tracking(float &forward_out, float &lateral_out, float &throttle_out);
 
     // sets state to 'ReturnHome'
-    // in case of a closed net shape (fish farm), ROV continues scanning until initial heading reached, then throttles to initial altitude
-    // in case of plane net shape, ROV directly throttles to initial altitude
-    void set_return_home() { _state = _net_shape == NetShape::Tube ? State::ReturnToHomeHeading : State::ReturnToHomeAltitude; }
+    void set_return_home();
 
     // get net tracking state to be sent via mavlink
     uint8_t get_state() { return _state; }

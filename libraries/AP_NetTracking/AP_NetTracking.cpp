@@ -413,3 +413,14 @@ void AP_NetTracking::update_loop_progress()
     constrain_float(_loop_progress, 0.0f, 100.0f);
 }
 
+
+void AP_NetTracking::set_return_home()
+{
+    // don't do anything if ROV already performs return home routine
+    if (_state == State::ReturnToHomeHeading || _state == State::ReturnToHomeAltitude) return;
+
+    // in case of a closed net shape (fish farm), ROV continues scanning until initial heading reached, then throttles to initial altitude
+    // in case of plane net shape, ROV directly throttles to initial altitude
+    _state = _net_shape == NetShape::Tube ? State::ReturnToHomeHeading : State::ReturnToHomeAltitude;
+}
+
