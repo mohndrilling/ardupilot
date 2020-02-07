@@ -14,6 +14,7 @@
 #define AP_NETTRACKING_NETSHAPE_DEFAULT NetShape::Tube
 #define AP_NETTRACKING_DISTANCE_DEFAULT 50
 #define AP_NETTRACKING_MESH_CNT_DEFAULT 200
+#define AP_NETTRACKING_USE_OPT_MARKER_DEFAULT 0
 #define AP_NETTRACKING_VELOCITY_DEFAULT 0.0f
 #define AP_NETTRACKING_OPTFLOW_VELOCITY_FACTOR 2.0f
 #define AP_NETTRACKING_DEFAULT_VELOCITY_FACTOR 0.8f
@@ -61,6 +62,9 @@ public:
 
     // sets state to 'ReturnHome'
     void set_return_home();
+
+    // detects whether the ROV has performed a full 360 degrees loop
+    bool detect_loop_closure();
 
     // get net tracking state to be sent via mavlink
     uint8_t get_state() { return _state; }
@@ -150,6 +154,7 @@ protected:
     AP_Int8  _control_var;
     AP_Float _tracking_velocity;
     AP_Int8  _velocity_ctrl;
+    AP_Int8  _use_optical_marker_termination;
     AP_Float _phase_shift_cutoff_freq;
     AP_Float _throttle_speed;
     AP_Float _phase_shift_thr_dist;
@@ -182,6 +187,9 @@ protected:
 
     // if distance error is small enough, use the stereovision heading data to always orientate the vehicle normal to the faced object surface
     bool _perform_att_ctrl;
+
+    // whether to terminate net tracking after the next loop (true, when a termination marker was detected)
+    bool _terminate = false;
 
     // filter
     LowPassFilterVector2f _phase_shift_filt;  // low pass filtering of phase shift input
