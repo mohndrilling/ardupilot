@@ -28,6 +28,7 @@ public:
     virtual void handle_stereo_vision_msg(const mavlink_message_t *msg) {};
     virtual void handle_net_inspection_msg(const mavlink_message_t *msg) {};
     virtual void handle_phase_correlation_msg(const mavlink_message_t *msg) {};
+    virtual void handle_marker_detection_msg(const mavlink_message_t *msg) {};
 
 protected:
 
@@ -37,6 +38,8 @@ protected:
     void set_net_inspection_data(uint32_t mesh_count, float mesh_distribution, uint64_t time_delta_usec);
 
     void set_phase_corr_data(float phase_shift_x, float phase_shift_y, float phase_shift_sum_x, float phase_shift_sum_y, uint64_t time_delta_usec);
+
+    void set_marker_detection_data(uint8_t marker_visible, uint8_t terminate, float horizontal_pos, uint64_t time_delta_usec);
 
 private:
 

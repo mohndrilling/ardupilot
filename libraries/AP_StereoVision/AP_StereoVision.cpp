@@ -97,6 +97,11 @@ void AP_StereoVision::update()
         _pc_state.last_processed_sensor_update_ms = _pc_state.last_update_ms;
     }
 
+    // marker detection
+    if (_md_state.last_processed_sensor_update_ms != _md_state.last_update_ms) {
+        _md_state.last_processed_sensor_update_ms = _md_state.last_update_ms;
+    }
+
 }
 
 // return true if stereo vision input is basically healthy (we are receiving data)
@@ -130,6 +135,17 @@ bool AP_StereoVision::phase_corr_healthy() const
 
     // healthy if we have received sensor messages within the past 300ms
     return ((AP_HAL::millis() - _pc_state.last_update_ms) < AP_STEREOVISION_TIMEOUT_MS);
+}
+
+// return true if marker detection is basically healthy (we are receiving data)
+bool AP_StereoVision::marker_detection_healthy() const
+{
+    if (!enabled()) {
+        return false;
+    }
+
+    // healthy if we have received sensor messages within the past 300ms
+    return ((AP_HAL::millis() - _md_state.last_update_ms) < AP_STEREOVISION_TIMEOUT_MS);
 }
 
 // consume STEREO_VISION_ODOM MAVLink message
@@ -171,6 +187,20 @@ void AP_StereoVision::handle_phase_correlation_msg(const mavlink_message_t *msg)
     // call backend
     if (_driver != nullptr) {
         _driver->handle_phase_correlation_msg(msg);
+    }
+}
+
+// consume NETTRACKING_MARKER MAVLink message
+void AP_StereoVision::handle_marker_detection_msg(const mavlink_message_t *msg)
+{
+    // exit immediately if not enabled
+    if (!enabled()) {
+        return;
+    }
+
+    // call backend
+    if (_driver != nullptr) {
+        _driver->handle_marker_detection_msg(msg);
     }
 }
 

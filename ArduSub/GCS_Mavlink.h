@@ -49,6 +49,7 @@ private:
     void handle_stereovision_odom(const mavlink_message_t *msg);
     void handle_net_inspection_msg(const mavlink_message_t *msg);
     void handle_phase_corr_msg(const mavlink_message_t *msg);
+    void handle_marker_detection_msg(const mavlink_message_t *msg);
     bool try_send_message(enum ap_message id) override;
 
     bool send_info(void);

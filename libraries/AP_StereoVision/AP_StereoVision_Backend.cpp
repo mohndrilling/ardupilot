@@ -53,3 +53,13 @@ void AP_StereoVision_Backend::set_phase_corr_data(float phase_shift_x, float pha
     _frontend._pc_state.time_delta_usec = time_delta_usec;
     _frontend._pc_state.last_update_ms = AP_HAL::millis();
 }
+
+void AP_StereoVision_Backend::set_marker_detection_data(uint8_t marker_visible, uint8_t terminate, float horizontal_pos, uint64_t time_delta_usec)
+{
+    _frontend._md_state.marker_visible = marker_visible == 1;
+    _frontend._md_state.terminate = terminate == 1;
+    _frontend._md_state.horizontal_pos = horizontal_pos;
+    _frontend._md_state.time_delta_usec = time_delta_usec;
+    _frontend._md_state.last_update_ms = AP_HAL::millis();
+
+}

@@ -70,6 +70,15 @@ public:
         Vector2f phase_shift_sum; // accumulated shift between current and first received image
     };
 
+    struct MarkerDetectionState {
+        uint64_t time_delta_usec; // time delta (in usec) between previous and most recent update
+        uint32_t last_update_ms;  // system time (in milliseconds) of last update from net inspector
+        uint32_t last_processed_sensor_update_ms; // timestamp of last net inspection update that was processed
+        bool marker_visible; // whether a marker is currently detected
+        bool terminate; // whether a termination marker is currently detected
+        float horizontal_pos; // horizontal position of the upper marker related to the image width (-1 ... 1)
+    };
+
     // detect and initialise any sensors
     void init(uint32_t log_bit);     // bitmask bit which indicates if we should log.  -1 means we always log
 
@@ -84,6 +93,7 @@ public:
     bool stereo_vision_healthy() const;
     bool net_inspection_healthy() const;
     bool phase_corr_healthy() const;
+    bool marker_detection_healthy() const;
 
     // return a 3D vector defining the position offset of the camera in meters relative to the body frame origin
     const Vector3f &get_pos_offset(void) const { return _pos_offset; }
@@ -92,6 +102,7 @@ public:
     void handle_stereo_vision_msg(const mavlink_message_t *msg);
     void handle_net_inspection_msg(const mavlink_message_t *msg);
     void handle_phase_correlation_msg(const mavlink_message_t *msg);
+    void handle_marker_detection_msg(const mavlink_message_t *msg);
 
     static const struct AP_Param::GroupInfo var_info[];
 
@@ -116,6 +127,14 @@ public:
     const uint64_t &get_pc_time_delta_usec() const { return _pc_state.time_delta_usec; }
     const uint32_t &get_last_pc_update_ms() const { return _pc_state.last_update_ms; }
 
+    // marker detection
+    const bool &marker_visible() const { return _md_state.marker_visible; }
+    const bool &marker_terminate() const { return _md_state.terminate; }
+    const float &marker_horizontal_pos() const { return _md_state.horizontal_pos; }
+    const uint64_t &get_md_time_delta_usec() const { return _md_state.time_delta_usec; }
+    const uint32_t &get_last_md_update_ms() const { return _md_state.last_update_ms; }
+
+
 private:
 
     static AP_StereoVision *_singleton;   
@@ -135,6 +154,7 @@ private:
     StereoVisionState _stv_state;
     NetInspectionState _ni_state;
     PhaseCorrState _pc_state;
+    MarkerDetectionState _md_state;
 };
 
 namespace AP {

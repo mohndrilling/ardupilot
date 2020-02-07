@@ -54,3 +54,13 @@ void AP_StereoVision_MAV::handle_phase_correlation_msg(const mavlink_message_t *
 
     set_phase_corr_data(packet.phase_shift_x, packet.phase_shift_y, packet.phase_shift_sum_x, packet.phase_shift_sum_y, packet.time_delta_usec);
 }
+
+// consume STEREO_VISION_ODOM MAVLink message
+void AP_StereoVision_MAV::handle_marker_detection_msg(const mavlink_message_t *msg)
+{
+    // decode message
+    mavlink_nettracking_marker_t packet;
+    mavlink_msg_nettracking_marker_decode(msg, &packet);
+
+    set_marker_detection_data(packet.marker_visible, packet.terminate, packet.horizontal_pos, packet.time_delta_usec);
+}
