@@ -569,6 +569,10 @@ const AP_Param::Info Sub::var_info[] = {
     // @Path: ../libraries/AP_NetTracking/AP_NetTracking.cpp
     GOBJECT(nettracking, "NETTR_",         AP_NetTracking),
 
+    // @Group: NETCL_
+    // @Path: ../libraries/AP_NetCleaning/AP_NetCleaning.cpp
+    GOBJECT(netcleaning, "NETCL_",         AP_NetCleaning),
+
 #if RCMAP_ENABLED == ENABLED
     // @Group: RCMAP_
     // @Path: ../libraries/AP_RCMapper/AP_RCMapper.cpp

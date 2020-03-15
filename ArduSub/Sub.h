@@ -95,6 +95,7 @@
 #if STEREOVISION == ENABLED
 #include <AP_StereoVision/AP_StereoVision.h>     // Stereo Vision library
 #include <AP_NetTracking/AP_NetTracking.h>       // Net tracking library
+#include <AP_NetCleaning/AP_NetCleaning.h>       // Net cleaning library
 #endif
 
 #if RCMAP_ENABLED == ENABLED
@@ -219,6 +220,7 @@ private:
 #if STEREOVISION == ENABLED
     AP_StereoVision stereovision;
     AP_NetTracking nettracking;
+    AP_NetCleaning netcleaning;
 #endif
     // system time in milliseconds of last recorded yaw reset from ekf
     uint32_t ekfYawReset_ms = 0;
@@ -578,6 +580,8 @@ private:
     void md_althold_run();
     bool md_net_tracking_init(void);
     void md_net_tracking_run();
+    bool md_net_cleaning_init(void);
+    void md_net_cleaning_run();
     bool manual_init(void);
     void manual_run();
     void failsafe_sensors_check(void);

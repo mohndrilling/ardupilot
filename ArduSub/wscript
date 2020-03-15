@@ -22,6 +22,7 @@ def build(bld):
             'AP_KDECAN',
             'AP_StereoVision',
             'AP_NetTracking',
+            'AP_NetCleaning',
         ],
     )
 
