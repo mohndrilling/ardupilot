@@ -67,62 +67,21 @@ void Sub::md_net_cleaning_run()
                     || fabsf(channel_lateral->norm_input()) > inp_threshold;
 
     ///////////// Attitude and Distance Control ////////////////////////
-    // if stereovision keeps receiving heading and distance information from stereo camera data via mavlink, run distance and attitude controllers
-    if (stereovision.stereo_vision_healthy())
-    {
-        netcleaning.run(forward_out, lateral_out, throttle_out);
 
-        // overwrite forward and throttle command if it is sent by pilot
-        if (fabsf(channel_forward->norm_input()) > inp_threshold)
-            forward_out = channel_forward->norm_input();
+    // run state machine of netcleaning library
+    netcleaning.run(forward_out, lateral_out, throttle_out);
 
-        if (fabsf(channel_throttle->norm_input() - 0.5f) > inp_threshold)
-            throttle_out = channel_throttle->norm_input() - 0.5f;
-
-        // overwrite lateral command, if there are any pilot inputs (-> hence the lateral scanning motion is stopped during pilot inputs)
-        if ( pilot_in )
-            lateral_out = channel_lateral->norm_input();
-
-        // update the heading, the vehicle keeps the current heading after loosing input data from stereovision library
-        last_pilot_heading = ahrs.yaw_sensor;
-        last_pilot_yaw_input_ms = tnow; // time when pilot last changed heading
-
-    }
-    else {
-        // target attitude from pilot commands
-        float target_roll, target_pitch, target_yaw_rate;
-
-        // convert pilot input to lean angles
-        get_pilot_desired_lean_angles(channel_roll->get_control_in(), channel_pitch->get_control_in(), target_roll, target_pitch, aparm.angle_max);
-
-        // get pilot's desired yaw rate
-        target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->get_control_in());
-
-        // call attitude controller
-        if (!is_zero(target_yaw_rate)) { // call attitude controller with rate yaw determined by pilot input
-            attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate);
-            last_pilot_heading = ahrs.yaw_sensor;
-            last_pilot_yaw_input_ms = tnow; // time when pilot last changed heading
-
-        } else { // hold current heading
-            // this check is required to prevent bounce back after very fast yaw maneuvers
-            // the inertia of the vehicle causes the heading to move slightly past the point when pilot input actually stopped
-            if (tnow < last_pilot_yaw_input_ms + 250) { // give 250ms to slow down, then set target heading
-                target_yaw_rate = 0; // Stop rotation on yaw axis
-
-                // call attitude controller with target yaw rate = 0 to decelerate on yaw axis
-                attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate);
-                last_pilot_heading = ahrs.yaw_sensor; // update heading to hold
-
-            } else { // call attitude controller holding absolute absolute bearing
-                attitude_control.input_euler_angle_roll_pitch_yaw(target_roll, target_pitch, last_pilot_heading, true);
-            }
-        }
-
-        // set pilot input commands
+    // overwrite forward and throttle command if it is sent by pilot
+    if (fabsf(channel_forward->norm_input()) > inp_threshold)
         forward_out = channel_forward->norm_input();
+
+    if (fabsf(channel_throttle->norm_input() - 0.5f) > inp_threshold)
+        throttle_out = channel_throttle->norm_input() - 0.5f;
+
+    // overwrite lateral command, if there are any pilot inputs (-> hence the lateral scanning motion is stopped during pilot inputs)
+    if ( pilot_in )
         lateral_out = channel_lateral->norm_input();
-    }
+
 
     ///////////// Depth Control ////////////////////////////////////////
     // Hold actual position until zero derivative is detected

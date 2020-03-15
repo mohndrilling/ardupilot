@@ -35,14 +35,14 @@ void AP_NetCleaning::init()
     _last_stereo_update_ms = _stereo_vision.get_last_stv_update_ms();
 
     // set initial state
-    _state = State::ApproachingNet;
+    _current_state = State::ApproachingNet;
 }
 
 void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle_out)
 {
 
 
-    switch (_state)
+    switch (_current_state)
     {
         case State::ApproachingNet:
             approach_net(forward_out, lateral_out, throttle_out);
@@ -50,6 +50,10 @@ void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle
 
         case State::AligningToNet:
             align_to_net(forward_out, lateral_out, throttle_out);
+            break;
+
+        case State::AttachingToNet:
+            attach_to_net(forward_out, lateral_out, throttle_out);
             break;
 
         default:
@@ -74,7 +78,33 @@ void AP_NetCleaning::approach_net(float &forward_out, float &lateral_out, float 
 
 void AP_NetCleaning::align_to_net(float &forward_out, float &lateral_out, float &throttle_out)
 {
-    // perform rotational trajectory
+    // entry action
+    if (_prev_state != _current_state)
+    {
+        // relative rotation: 90 degrees about x axis, 90 degrees about y axis, rpy-sequence
+        // values in centidegrees
+        Vector3f target_euler_angles_cd = Vector3f(9000.0f, 9000.0f, 0.0f);
+        uint32_t duration_ms = 6000;
+        _attitude_control.start_trajectory(target_euler_angles_cd, duration_ms, true);
+        _prev_state = _current_state;
+    }
+
+    // perform rotational trajectory and switch state if finished
+    if(_attitude_control.update_trajectory())
+    {
+        switch_state(State::AttachingToNet, "AttachingToNet");
+    }
+
+    // no translational movement
+    forward_out = 0.0f;
+    lateral_out = 0.0f;
+    throttle_out = 0.0f;
+}
+
+void AP_NetCleaning::attach_to_net(float &forward_out, float &lateral_out, float &throttle_out)
+{
+    // run attitude controller, keep current attitude
+    _attitude_control.keep_current_attitude();
 
     // no translational movement
     forward_out = 0.0f;
@@ -141,12 +171,18 @@ void AP_NetCleaning::hold_heading_and_distance(float &forward_out, float target_
 
     if (_target_dist_reached && AP_HAL::millis() - _target_dist_reached_ms > _hold_dist_ms)
     {
-        _state = State::AligningToNet;
-        gcs().send_text(MAV_SEVERITY_INFO, "NetCleaning: Switching to state 'AligningToNet'");
+        switch_state(State::AligningToNet, "AligningToNet");
     }
 }
 
-void AP_NetCleaning::switch_state_with_delay(uint32_t milliseconds, AP_NetCleaning::State target_state)
+void AP_NetCleaning::switch_state(State target_state, const char *state_name)
+{
+    _prev_state = _current_state;
+    _current_state = target_state;
+    gcs().send_text(MAV_SEVERITY_INFO, "NetCleaning: Switching to state '%s'", state_name);
+}
+
+void AP_NetCleaning::switch_state_with_delay(uint32_t milliseconds, State target_state)
 {
 
 }
