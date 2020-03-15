@@ -41,6 +41,10 @@ bool Sub::set_mode(control_mode_t mode, ModeReason reason)
     case MD_NET_TRACKING:
         success = md_net_tracking_init();
         break;
+
+    case MD_NET_CLEANING:
+        success = md_net_cleaning_init();
+        break;
 #endif
 
     case AUTO:
@@ -146,6 +150,10 @@ void Sub::update_flight_mode()
 
     case MD_NET_TRACKING:
         md_net_tracking_run();
+        break;
+
+    case MD_NET_CLEANING:
+        md_net_cleaning_run();
         break;
 
     case AUTO:

@@ -216,6 +216,9 @@ public:
         //Net Tracking library
         k_param_nettracking,
 
+        //Net Cleaning library
+        k_param_netcleaning,
+
         k_param_vehicle = 257, // vehicle common block of parameters
     };
 

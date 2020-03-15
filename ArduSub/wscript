@@ -23,6 +23,7 @@ def build(bld):
             'AP_OSD',
             'AP_StereoVision',
             'AP_NetTracking',
+            'AP_NetCleaning',
         ],
     )
 
