@@ -41,6 +41,17 @@ public:
     // Command absolute euler roll, pitch, yaw. Accumulate yaw and pitch to current attitude.
     void input_euler_roll_pitch_yaw_accumulate(float euler_roll_angle_cd, float euler_pitch_angle_offs_cd, float euler_yaw_offs_cd, float dt, bool update_target);
 
+    // Run attitude controller to hold current attitude
+    void keep_current_attitude();
+
+    // Stores target attitude and duration for a rotational trajectory
+    // if target angles are relative, they get added to the current attitude.
+    void start_trajectory(Vector3f target_euler_angles_cd, uint32_t duration, bool relative);
+
+    // updates trajectory's intermediate angles and calls attitude controller
+    // returns true if finished
+    bool update_trajectory();
+
     // Set output throttle
     void set_throttle_out(float throttle_in, bool apply_angle_boost, float filt_cutoff) override;
 
@@ -101,6 +112,16 @@ protected:
     float _target_roll_cd;
     float _target_pitch_cd;
     float _target_yaw_cd;
+
+    // start and target angles of rotational trajectory
+    Vector3f _trajectory_start_angles_cd;
+    Vector3f _trajectory_target_angles_cd;
+
+    // duration of rotational trajectory
+    uint32_t _trajectory_duration_ms;
+
+    // starting time stamp of rotational trajectory
+    uint32_t _trajectory_start_ms;
 
     bool _last_yaw_err_negative;
 

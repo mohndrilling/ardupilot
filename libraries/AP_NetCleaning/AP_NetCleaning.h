@@ -26,7 +26,8 @@ public:
                     _attitude_control(attitude_control),
                     _pos_control(pos_control),
                     _stereo_vision(stereo_vision),
-                    _state(State::ApproachingNet),
+                    _current_state(State::ApproachingNet),
+                    _prev_state(State::Inactive),
                     _loop_progress(-1)
     {
         AP_Param::setup_object_defaults(this, var_info);
@@ -51,7 +52,7 @@ public:
     float get_loop_progress() { return _loop_progress; }
 
     // get net tracking state to be sent via mavlink
-    uint8_t get_state() { return _state; }
+    uint8_t get_state() { return _current_state; }
 
     // resets internal variables to default values
     void reset();
@@ -76,11 +77,17 @@ protected:
     // align_to_net: perform rotational trajectory such that brushes face the net
     void align_to_net(float &forward_out, float &lateral_out, float &throttle_out);
 
+    // attach_to_net: throttles along vehicles z-axis until brushes touch the net.
+    void attach_to_net(float &forward_out, float &lateral_out, float &throttle_out);
+
     // hold_heading_and_distance: keeps desired distance and perpendicular heading w.r.t. the net
     void hold_heading_and_distance(float &forward_out, float target_dist);
 
+    // switch_state: switch the state of the state machine
+    void switch_state(State target_state, const char *state_name);
+
     // switch_state_with_delay: wait for specified time and switch to target_state afterwards
-    void switch_state_with_delay(uint32_t milliseconds, AP_NetCleaning::State target_state);
+    void switch_state_with_delay(uint32_t milliseconds, State target_state);
 
     //update loop progress (just for monitoring)
     void update_loop_progress();
@@ -116,8 +123,11 @@ protected:
     // the altitude at start of net tracking
     float _home_altitude;
 
-    // net tracking State
-    State _state;
+    // current net tracking State
+    State _current_state;
+
+    // previous net tracking State
+    State _prev_state;
 
     // 360 degrees loop progress in percent
     float _loop_progress;

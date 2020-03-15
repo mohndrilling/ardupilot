@@ -240,6 +240,94 @@ void AC_AttitudeControl_Sub::input_euler_roll_pitch_yaw_accumulate(float euler_r
     input_euler_angle_roll_pitch_yaw(_target_roll_cd, _target_pitch_cd, _target_yaw_cd, true);
 }
 
+void AC_AttitudeControl_Sub::keep_current_attitude()
+{
+    input_euler_angle_roll_pitch_yaw(_target_roll_cd, _target_pitch_cd, _target_yaw_cd, true);
+}
+
+void AC_AttitudeControl_Sub::start_trajectory(Vector3f target_euler_angles_cd, uint32_t duration, bool relative)
+{
+    // current vehicle attitude
+    float current_roll, current_pitch, current_yaw;
+
+    Quaternion vehicle_attitude;
+    _ahrs.get_quat_body_to_ned(vehicle_attitude);
+    vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
+
+    if (relative)
+    {
+        // if relative is set to true, the relative target angles are interpreted as a rpy-sequence (312 convention)
+        // -> vehicle is first rotated about x-axis, then y- and z-axis
+
+        // relative rotation during trajectory
+        float relative_roll = radians(target_euler_angles_cd[0] * 0.01f);
+        float relative_pitch = radians(target_euler_angles_cd[1] * 0.01f);
+        float relative_yaw = radians(target_euler_angles_cd[2] * 0.01f);
+
+        Quaternion relative_attitude_312;
+        relative_attitude_312.from_vector312(relative_roll, relative_pitch, relative_yaw);
+
+        // absolute target attitude
+        Quaternion target_attitude = vehicle_attitude * relative_attitude_312;
+
+        // target euler angles as ypr sequence
+        float target_roll, target_pitch, target_yaw;
+        target_attitude.to_euler(target_roll, target_pitch, target_yaw);
+
+        _trajectory_target_angles_cd = Vector3f(RadiansToCentiDegrees(target_roll), RadiansToCentiDegrees(target_pitch), RadiansToCentiDegrees(target_yaw));
+    }
+    else
+    {
+        _trajectory_target_angles_cd = target_euler_angles_cd;
+    }
+
+    // store start and target attitude of trajectory in centi degrees
+    _trajectory_start_angles_cd = Vector3f(RadiansToCentiDegrees(current_roll), RadiansToCentiDegrees(current_pitch), RadiansToCentiDegrees(current_yaw));
+
+    // store duration
+    _trajectory_duration_ms = duration;
+
+    // store time stamp of trajectory start
+    _trajectory_start_ms = AP_HAL::millis();
+
+    gcs().send_text(MAV_SEVERITY_INFO, "trajectory start: %f, %f, %f", _trajectory_start_angles_cd[0], _trajectory_start_angles_cd[1], _trajectory_start_angles_cd[2]);
+    gcs().send_text(MAV_SEVERITY_INFO, "trajectory end: %f, %f, %f", _trajectory_target_angles_cd[0], _trajectory_target_angles_cd[1], _trajectory_target_angles_cd[2]);
+
+}
+
+bool AC_AttitudeControl_Sub::update_trajectory()
+{
+    // current time stamp
+    float t = static_cast<float>(AP_HAL::millis() - _trajectory_start_ms);
+
+    if (t <= _trajectory_duration_ms)
+    {
+        // get euler angles from 5th order polynomial trajectory (defined in AP_Math/polynomial5.h)
+        Vector3f cur_euler_angles_cd;
+        polynomial_trajectory(cur_euler_angles_cd, _trajectory_start_angles_cd, _trajectory_target_angles_cd, _trajectory_duration_ms, t);
+
+        // update the target angles for attitude controller
+        _target_roll_cd = cur_euler_angles_cd[0];
+        _target_pitch_cd = cur_euler_angles_cd[1];
+        _target_yaw_cd = cur_euler_angles_cd[2];
+
+        // perform attitude control
+        input_euler_angle_roll_pitch_yaw(_target_roll_cd, _target_pitch_cd, _target_yaw_cd, true);
+
+        if (static_cast<int>(t) %250 == 0)
+            gcs().send_text(MAV_SEVERITY_INFO, "trajectory: %f, %f, %f, %f", t, _target_roll_cd, _target_pitch_cd, _target_yaw_cd);
+
+        return false;
+    }
+    else
+    {
+        // perform attitude control
+        input_euler_angle_roll_pitch_yaw(_target_roll_cd, _target_pitch_cd, _target_yaw_cd, true);
+
+        return true;
+    }
+}
+
 void AC_AttitudeControl_Sub::set_throttle_out(float throttle_in, bool apply_angle_boost, float filter_cutoff)
 {
     _throttle_in = throttle_in;
