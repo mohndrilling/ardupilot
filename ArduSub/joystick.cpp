@@ -155,6 +155,9 @@ void Sub::handle_jsbutton_press(uint8_t button, bool shift, bool held)
     case JSButton::button_function_t::k_mode_net_tracking:
         set_mode(MD_NET_TRACKING, MODE_REASON_TX_COMMAND);
         break;
+    case JSButton::button_function_t::k_mode_net_cleaning:
+        set_mode(MD_NET_CLEANING, MODE_REASON_TX_COMMAND);
+        break;
     case JSButton::button_function_t::k_mode_guided:
         set_mode(GUIDED, MODE_REASON_TX_COMMAND);
         break;
