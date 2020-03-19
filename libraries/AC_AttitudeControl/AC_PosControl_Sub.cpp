@@ -306,6 +306,53 @@ void AC_PosControl_Sub::relax_alt_hold_controllers()
     _accel_target.z = -(_ahrs.get_accel_ef_blended().z + GRAVITY_MSS) * 100.0f;
     _pid_accel_z.reset_filter();
 }
+
+
+void AC_PosControl_Sub::start_altitude_trajectory(float target_altitude, uint32_t duration, bool relative)
+{
+
+    // store trajectory's starting altitude (current altitude)
+    _trajectory_starting_altitude = _inav.get_altitude();
+
+    // if relative is true, add target_altitude to current_altitude
+    if (relative)
+    {
+        _trajectory_target_altitude = _inav.get_altitude() + target_altitude;
+    }
+    else
+    {
+        _trajectory_target_altitude = target_altitude;
+    }
+
+    // store duration
+    _trajectory_altitude_duration_ms = duration;
+
+    // store starting time stamp
+    _trajectory_altitude_start_ms = AP_HAL::millis();
+}
+
+
+bool AC_PosControl_Sub::update_altitude_trajectory()
+{
+    // current time stamp
+    float t = static_cast<float>(AP_HAL::millis() - _trajectory_altitude_start_ms);
+
+    if (t <= _trajectory_altitude_duration_ms)
+    {
+        // get target altitude from 5th order polynomial trajectory (defined in AP_Math/polynomial5.h)
+        float cur_target_altitude;
+        polynomial_trajectory(cur_target_altitude, _trajectory_starting_altitude, _trajectory_target_altitude, _trajectory_altitude_duration_ms, t);
+
+        _pos_target.z = cur_target_altitude;
+
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
 void AC_PosControl_Sub::update_dist_controller(float& target_forward, float cur_dist, float target_dist, float dt, bool update)
 {
     // simple pid controller for distance control

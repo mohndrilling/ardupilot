@@ -74,6 +74,14 @@ public:
     ///     integrator is not reset
     void relax_alt_hold_controllers();
 
+    // start_altitude_trajectory: stores target altitude and duration for a altitude trajectory
+    // if relative is true, the target_altitude value gets added tu the current altitude
+    void start_altitude_trajectory(float target_altitude, uint32_t duration, bool relative);
+
+    // updates trajectory's intermediate altitude
+    // returns true if finished
+    bool update_altitude_trajectory();
+
     /// control distance to net
     void update_dist_controller(float& target_forward, float cur_dist, float target_dist, float dt, bool update);
 
@@ -92,6 +100,14 @@ public:
 private:
     float       _alt_max; // max altitude - should be updated from the main code with altitude limit from fence
     float       _alt_min; // min altitude - should be updated from the main code with altitude limit from fence
+
+    // internal variables for altitude trajectory following
+    float _trajectory_starting_altitude; // altitude at which the altitude trajectory starts
+    float _trajectory_target_altitude; // altitude at which the altitude trajectory finishes
+
+    uint32_t _trajectory_altitude_duration_ms; // duration of altitude trajectory
+
+    uint32_t _trajectory_altitude_start_ms; // starting time stamp of altitude trajectory
 
     // position controller internal variables
     float       _dist_last;             // last distance measurement in m, needed for velocity calculation during nettracking
