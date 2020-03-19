@@ -56,6 +56,18 @@ void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle
             attach_to_net(forward_out, lateral_out, throttle_out);
             break;
 
+        case State::AttachingBrushes:
+            attach_brushes(forward_out, lateral_out, throttle_out);
+            break;
+
+        case State::CleaningNet:
+            clean_net(forward_out, lateral_out, throttle_out);
+            break;
+
+        case State::ThrottleDownwards:
+            throttle_downwards(forward_out, lateral_out, throttle_out);
+            break;
+
         default:
 
             break;
@@ -74,6 +86,10 @@ void AP_NetCleaning::approach_net(float &forward_out, float &lateral_out, float 
 
     // no throttle
     throttle_out = 0.0f;
+
+    /////////////// State Transition ////////////////
+    if (_state_logic_finished)
+        switch_state_after_post_delay(State::AligningToNet, "AligningToNet", AP_NETCLEANING_APPROACHING_NET_POST_DELAY);
 }
 
 void AP_NetCleaning::align_to_net(float &forward_out, float &lateral_out, float &throttle_out)
@@ -89,16 +105,22 @@ void AP_NetCleaning::align_to_net(float &forward_out, float &lateral_out, float 
         _prev_state = _current_state;
     }
 
-    // perform rotational trajectory and switch state if finished
-    if(_attitude_control.update_trajectory())
-    {
-        switch_state(State::AttachingToNet, "AttachingToNet");
-    }
+    // perform rotational trajectory, update_trajectory returns true if trajectory has finished
+    bool trajectory_finished = _attitude_control.update_trajectory();
 
     // no translational movement
     forward_out = 0.0f;
     lateral_out = 0.0f;
     throttle_out = 0.0f;
+
+    /////////////// State Transition ////////////////
+    if (!_state_logic_finished && trajectory_finished)
+    {
+        set_state_logic_finished();
+    }
+
+    if (_state_logic_finished)
+        switch_state_after_post_delay(State::AttachingToNet, "AttachingToNet", AP_NETCLEANING_ALIGNING_TO_NET_POST_DELAY);
 }
 
 void AP_NetCleaning::attach_to_net(float &forward_out, float &lateral_out, float &throttle_out)
@@ -106,10 +128,109 @@ void AP_NetCleaning::attach_to_net(float &forward_out, float &lateral_out, float
     // run attitude controller, keep current attitude
     _attitude_control.keep_current_attitude();
 
-    // no translational movement
+    // translational movement
     forward_out = 0.0f;
     lateral_out = 0.0f;
-    throttle_out = 0.0f;
+    throttle_out = -AP_NETCLEANING_THROTTLE_THRUST_DEFAULT;
+
+    /////////////// State Transition ////////////////
+    // directly set state logic to finished and go into post delay
+    // later use the motor currents to detect, if the AUV has attached to the net
+    if (!_state_logic_finished)
+    {
+        set_state_logic_finished();
+    }
+
+    // the AUV will continue throttling towards the net and states are switched when the post delay is elapsed
+    if (_state_logic_finished)
+        switch_state_after_post_delay(State::AttachingBrushes, "AttachingBrushes", AP_NETCLEANING_ATTACHING_TO_NET_POST_DELAY);
+}
+
+void AP_NetCleaning::attach_brushes(float &forward_out, float &lateral_out, float &throttle_out)
+{
+    // run net cleaning attitude control
+    run_net_cleaning_attitude_control();
+
+    // translational movement
+    forward_out = 0.0f;
+    lateral_out = 0.0f;
+    throttle_out = -AP_NETCLEANING_THROTTLE_THRUST_DEFAULT;
+
+    /////////////// State Transition ////////////////
+    // directly set state logic to finished and go into post delay
+    if (!_state_logic_finished)
+    {
+        set_state_logic_finished();
+    }
+
+    // this state will continue until post delay elapsed
+    if (_state_logic_finished)
+        switch_state_after_post_delay(State::CleaningNet, "CleaningNet", AP_NETCLEANING_ATTACHING_BRUSHES_POST_DELAY);
+}
+
+
+void AP_NetCleaning::clean_net(float &forward_out, float &lateral_out, float &throttle_out)
+{
+    // entry action
+    if (_prev_state != _current_state)
+    {
+        // store initial yaw angle
+        _initial_yaw = _attitude_control.get_accumulated_yaw();
+        _prev_state = _current_state;
+    }
+
+    // run net cleaning attitude control
+    run_net_cleaning_attitude_control();
+
+    // translational movement
+    forward_out = AP_NETCLEANING_FORWARD_THRUST_DEFAULT;
+    lateral_out = 0.0f;
+    throttle_out = -AP_NETCLEANING_THROTTLE_THRUST_DEFAULT;
+
+    /////////////// State Transition ////////////////
+    // finish state after performing 360 degree loop
+    if (!_state_logic_finished && detect_loop_closure())
+    {
+        set_state_logic_finished();
+    }
+
+    // apply post delay and set forward_out to zero in order to make the AUV decelerate its forwards movement
+    if (_state_logic_finished){
+        forward_out = 0.0f;
+        switch_state_after_post_delay(State::ThrottleDownwards, "ThrottleDownwards", AP_NETCLEANING_CLEANING_NET_POST_DELAY);
+    }
+}
+
+void AP_NetCleaning::throttle_downwards(float &forward_out, float &lateral_out, float &throttle_out)
+{
+    // entry action
+    if (_prev_state != _current_state)
+    {
+        // start polynomial altitude trajectory moving the vehicle to a deeper lane
+        uint32_t duration_ms = 10000;
+        _pos_control.start_altitude_trajectory(-AP_NETCLEANING_LANE_WIDTH_DEFAULT, duration_ms, true);
+        _prev_state = _current_state;
+    }
+
+    // follow depth trajectory, update_trajectory returns true if trajectory has finished
+    bool trajectory_finished = _pos_control.update_altitude_trajectory();
+
+    // run net cleaning attitude control
+    run_net_cleaning_attitude_control();
+
+    // translational movement
+    forward_out = 0.0f;
+    lateral_out = 0.0f;
+    throttle_out = -AP_NETCLEANING_THROTTLE_THRUST_DEFAULT;
+
+    /////////////// State Transition ////////////////
+    if (!_state_logic_finished && trajectory_finished)
+    {
+        set_state_logic_finished();
+    }
+
+    if (_state_logic_finished)
+        switch_state_after_post_delay(State::CleaningNet, "CleaningNet", AP_NETCLEANING_THROTTLE_DOWNWARDS_POST_DELAY);
 }
 
 void AP_NetCleaning::hold_heading_and_distance(float &forward_out, float target_dist)
@@ -162,29 +283,42 @@ void AP_NetCleaning::hold_heading_and_distance(float &forward_out, float target_
     _pos_control.update_dist_controller(forward_out, cur_dist, d_dist, _sensor_intervals.stv_dt, _sensor_updates.stv_updated);
 
     /////////////////////////////////////////////////////////////
-    // state transition
-    if (!_target_dist_reached && fabs(cur_dist - d_dist) < _dist_tolerance)
+    // check whether task is finished
+    if (!_state_logic_finished && fabs(cur_dist - d_dist) < _dist_tolerance)
     {
-        _target_dist_reached_ms = AP_HAL::millis();
-        _target_dist_reached = true;
+        set_state_logic_finished();
     }
+}
 
-    if (_target_dist_reached && AP_HAL::millis() - _target_dist_reached_ms > _hold_dist_ms)
-    {
-        switch_state(State::AligningToNet, "AligningToNet");
-    }
+void AP_NetCleaning::run_net_cleaning_attitude_control()
+{
+    // keep the vehicle's x-axis levelled so the vehicle will move in horizontal lanes
+    _attitude_control.keep_nose_horizontal();
+
+    // by relaxing the roll and pitch control of the vehicle, it's attitude can be freely manipulated about the x- and y-axis.
+    // This way it will be evenly pushed towards the net, and the roll and pitch orientation will be passively guided by the net
+    _attitude_control.relax_roll_control();
+    _attitude_control.relax_pitch_control();
 }
 
 void AP_NetCleaning::switch_state(State target_state, const char *state_name)
 {
     _prev_state = _current_state;
     _current_state = target_state;
+    _state_logic_finished = false;
     gcs().send_text(MAV_SEVERITY_INFO, "NetCleaning: Switching to state '%s'", state_name);
 }
 
-void AP_NetCleaning::switch_state_with_delay(uint32_t milliseconds, State target_state)
+void AP_NetCleaning::switch_state_after_post_delay(State target_state, const char *state_name, uint32_t post_delay)
 {
+    if (AP_HAL::millis() - _state_logic_finished_ms > post_delay)
+        switch_state(target_state, state_name);
+}
 
+void AP_NetCleaning::set_state_logic_finished()
+{
+    _state_logic_finished = true;
+    _state_logic_finished_ms = AP_HAL::millis();
 }
 
 bool AP_NetCleaning::detect_loop_closure()

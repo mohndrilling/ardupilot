@@ -12,6 +12,19 @@
 #include "AP_StereoVision/AP_StereoVision.h"
 
 #define AP_NETCLEANING_INITIAL_NET_DISTANCE_DEFAULT 70
+#define AP_NETCLEANING_THROTTLE_THRUST_DEFAULT 0.25f
+#define AP_NETCLEANING_FORWARD_THRUST_DEFAULT 0.25f
+#define AP_NETCLEANING_LANE_WIDTH_DEFAULT 60
+#define AP_NETCLEANING_MAX_CLEANING_DEPTH_DEFAULT 300
+
+#define AP_NETCLEANING_APPROACHING_NET_POST_DELAY 4000
+#define AP_NETCLEANING_ALIGNING_TO_NET_POST_DELAY 4000
+#define AP_NETCLEANING_ATTACHING_TO_NET_POST_DELAY 5000
+#define AP_NETCLEANING_ATTACHING_BRUSHES_POST_DELAY 3000
+#define AP_NETCLEANING_CLEANING_NET_POST_DELAY 2000
+#define AP_NETCLEANING_THROTTLE_DOWNWARDS_POST_DELAY 2000
+
+
 
 class AP_NetCleaning {
 public:
@@ -66,7 +79,8 @@ protected:
       AligningToNet,
       StartingBrushMotors,
       AttachingToNet,
-      Cleaning,
+      AttachingBrushes,
+      CleaningNet,
       ThrottleDownwards,
       Surfacing
     };
@@ -77,17 +91,32 @@ protected:
     // align_to_net: perform rotational trajectory such that brushes face the net
     void align_to_net(float &forward_out, float &lateral_out, float &throttle_out);
 
-    // attach_to_net: throttles along vehicles z-axis until brushes touch the net.
+    // attach_to_net: throttles along vehicles z-axis until auv touch the net.
     void attach_to_net(float &forward_out, float &lateral_out, float &throttle_out);
+
+    // attach_brushes: relax yaw and pitch controller and keep throttling, so brushes properly align to the net.
+    void attach_brushes(float &forward_out, float &lateral_out, float &throttle_out);
+
+    // clean_net: move forwards whith activated brushes pushed to the net
+    void clean_net(float &forward_out, float &lateral_out, float &throttle_out);
+
+    // throttle_downwards: move to the next cleaning lane
+    void throttle_downwards(float &forward_out, float &lateral_out, float &throttle_out);
 
     // hold_heading_and_distance: keeps desired distance and perpendicular heading w.r.t. the net
     void hold_heading_and_distance(float &forward_out, float target_dist);
 
+    // run_net_cleaning_attitude_control: keep nose horizontal and relax roll and pitch controller
+    void run_net_cleaning_attitude_control();
+
     // switch_state: switch the state of the state machine
     void switch_state(State target_state, const char *state_name);
 
-    // switch_state_with_delay: wait for specified time and switch to target_state afterwards
-    void switch_state_with_delay(uint32_t milliseconds, State target_state);
+    // switch_state_after_post_delay: wait for specified time and switch to target_state afterwards
+    void switch_state_after_post_delay(State target_state, const char *state_name, uint32_t milliseconds);
+
+    // set_state_logic_finished: set timestamp and flag (called when a state has finished its task)
+    void set_state_logic_finished();
 
     //update loop progress (just for monitoring)
     void update_loop_progress();
@@ -123,6 +152,9 @@ protected:
     // the altitude at start of net tracking
     float _home_altitude;
 
+    // indicates whether maximum depth is reached
+    bool _terminate = false;
+
     // current net tracking State
     State _current_state;
 
@@ -139,19 +171,18 @@ protected:
 
     /////////////// state specific variables ////////////////
 
+    ///////// shared between states
+
+    // true if the task of the current state is fulfilled
+    bool _state_logic_finished = false;
+
+    // the time stamp of when the task of the current state was fulfilled
+    uint32_t _state_logic_finished_ms = 0;
+
     ///////// ApproachingNet
 
     // target distance towards net (cm)
     AP_Int16 _initial_net_distance;
-
-    // time stamp, when vehicle reaches target distance towards net
-    uint32_t _target_dist_reached_ms = 0;
-
-    // whether target distance is reached
-    bool _target_dist_reached = false;
-
-    // periods in milliseconds, that vehicle has to obtain target distance before changing to next state
-    uint32_t _hold_dist_ms = 4000; // 2 seconds
 
     // tolerance for target distance (m)
     float _dist_tolerance = 0.1;
