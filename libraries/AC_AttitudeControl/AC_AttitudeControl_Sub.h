@@ -41,6 +41,9 @@ public:
     // Command absolute euler roll, pitch, yaw. Accumulate yaw and pitch to current attitude.
     void input_euler_roll_pitch_yaw_accumulate(float euler_roll_angle_cd, float euler_pitch_angle_offs_cd, float euler_yaw_offs_cd, float dt, bool update_target);
 
+    // Keep x-axis of the vehicle in the horizontal plane, only control about vehicles yaw axis
+    void keep_nose_horizontal();
+
     // Run attitude controller to hold current attitude
     void keep_current_attitude();
 
@@ -64,6 +67,11 @@ public:
     void set_throttle_mix_min() override { _throttle_rpy_mix_desired = _thr_mix_min; }
     void set_throttle_mix_man() override { _throttle_rpy_mix_desired = _thr_mix_man; }
     void set_throttle_mix_max() override { _throttle_rpy_mix_desired = _thr_mix_max; }
+
+    // relax the attitude controller about the specified axis
+    void relax_roll_control() { _relax_roll = true; }
+    void relax_pitch_control() { _relax_pitch = true; }
+    void relax_yaw_control() { _relax_yaw = true; }
 
     // resets low pass filter for yaw error
     void reset_yaw_err_filter() { _yaw_error_filter.reset(0.0f); }
@@ -126,5 +134,10 @@ protected:
     bool _last_yaw_err_negative;
 
     float _yaw_accumulated; // accumulated yaw angle in degrees
-    float _last_yaw; // stores the last measured yaw angle
+    float _last_yaw; // stores the last measured yaw anglez
+
+    // relax attitude control about specified axis
+    bool _relax_roll;
+    bool _relax_pitch;
+    bool _relax_yaw;
 };

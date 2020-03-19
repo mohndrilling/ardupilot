@@ -174,7 +174,10 @@ AC_AttitudeControl_Sub::AC_AttitudeControl_Sub(AP_AHRS_View &ahrs, const AP_Vehi
     _pid_rate_pitch(AC_ATC_SUB_RATE_RP_P, AC_ATC_SUB_RATE_RP_I, AC_ATC_SUB_RATE_RP_D, AC_ATC_SUB_RATE_RP_IMAX, AC_ATC_SUB_RATE_RP_FILT_HZ, dt),
     _pid_rate_yaw(AC_ATC_SUB_RATE_YAW_P, AC_ATC_SUB_RATE_YAW_I, AC_ATC_SUB_RATE_YAW_D, AC_ATC_SUB_RATE_YAW_IMAX, AC_ATC_SUB_RATE_YAW_FILT_HZ, dt),
     _last_yaw_err_negative(false),
-    _yaw_accumulated(0.0f)
+    _yaw_accumulated(0.0f),
+    _relax_roll(false),
+    _relax_pitch(false),
+    _relax_yaw(false)
 {
     AP_Param::setup_object_defaults(this, var_info);
 
@@ -240,6 +243,68 @@ void AC_AttitudeControl_Sub::input_euler_roll_pitch_yaw_accumulate(float euler_r
     input_euler_angle_roll_pitch_yaw(_target_roll_cd, _target_pitch_cd, _target_yaw_cd, true);
 }
 
+void AC_AttitudeControl_Sub::keep_nose_horizontal()
+{
+    // Get the rotation matrix describing the vehicles attitude with regard to the inertial frame
+    Quaternion vehicle_attitude;
+    _ahrs.get_quat_body_to_ned(vehicle_attitude);
+    Matrix3f veh_att_rot_matrix;
+    vehicle_attitude.rotation_matrix(veh_att_rot_matrix);
+
+    // z axis (inertial frame)
+    Vector3f z_I = Vector3f(0.0f, 0.0f, 1.0f);
+    // normalized z-axis of the body frame expressed in the inertial frame
+    Vector3f z_B = veh_att_rot_matrix * z_I;
+    float z_B_norm = z_B.length();
+    if (z_B_norm > 0)
+        z_B /= z_B_norm;
+
+    // If the vehicle's x-axis is not in the horizontal plane, the vehicle is supposed to rotate about the yaw axis
+    // until the x-axis reaches the horizontal plane.
+    // The desired x-axis of the vehicle is therefore parallel to the inertial xy-plane as well as to the vehicle's xy-plane
+    // Thus it can be expressed by the cross product of the normal vectors z_I and z_B of these planes
+
+    // desired body-frame x-axis
+    Vector3f x_d = z_I % z_B;
+    float x_d_length = x_d.length();
+    if (x_d_length > 0)
+        x_d /= x_d_length;
+
+    // the body-frame x-axis expressed with regard to the inertial frame
+    Vector3f x_B = veh_att_rot_matrix * Vector3f(1.0f, 0.0f, 0.0f);
+
+    // x_B is supposed to be rotated until it reaches the desired (horizontal) orientation x_d
+    // the rotation axis is perpendicular to both vectors, thus expressed by the cross product
+    Vector3f rot_axis = x_B % x_d;
+
+    // the angle of the necessary rotation is retrieved by the dot product
+    float correction_angle = acosf(constrain_float(x_d * x_B, -1.0f, 1.0f));
+
+    // the rotation axis and the body-frame's z-Axis are parallel but might have opposite directions
+    // use sign of dot product to check for opposing directions.
+    // If so, the angle is negated, so it describes the required rotation about the vehicle's z-Axis to keep the x-axis horizontal
+    if (rot_axis * z_B < 0.0f)
+        correction_angle = -correction_angle;
+
+    // express the required rotation as a quaternion
+    Quaternion correction_quat;
+    correction_quat.from_axis_angle(z_B, correction_angle);
+
+    // the target quarternion consists of the correcting rotation applied to the current vehicle attitude
+    Quaternion target_quat = correction_quat * vehicle_attitude;
+
+    // express the new target orientation as euler angles
+    float roll, pitch, yaw;
+    target_quat.to_euler(roll, pitch, yaw);
+
+    _target_roll_cd = RadiansToCentiDegrees(roll);
+    _target_pitch_cd = RadiansToCentiDegrees(pitch);
+    _target_yaw_cd = RadiansToCentiDegrees(yaw);
+
+    // call attitude controller to correct for the new target angles
+    input_euler_angle_roll_pitch_yaw(_target_roll_cd, _target_pitch_cd, _target_yaw_cd, true);
+}
+
 void AC_AttitudeControl_Sub::keep_current_attitude()
 {
     input_euler_angle_roll_pitch_yaw(_target_roll_cd, _target_pitch_cd, _target_yaw_cd, true);
@@ -289,10 +354,6 @@ void AC_AttitudeControl_Sub::start_trajectory(Vector3f target_euler_angles_cd, u
 
     // store time stamp of trajectory start
     _trajectory_start_ms = AP_HAL::millis();
-
-    gcs().send_text(MAV_SEVERITY_INFO, "trajectory start: %f, %f, %f", _trajectory_start_angles_cd[0], _trajectory_start_angles_cd[1], _trajectory_start_angles_cd[2]);
-    gcs().send_text(MAV_SEVERITY_INFO, "trajectory end: %f, %f, %f", _trajectory_target_angles_cd[0], _trajectory_target_angles_cd[1], _trajectory_target_angles_cd[2]);
-
 }
 
 bool AC_AttitudeControl_Sub::update_trajectory()
@@ -304,7 +365,7 @@ bool AC_AttitudeControl_Sub::update_trajectory()
     {
         // get euler angles from 5th order polynomial trajectory (defined in AP_Math/polynomial5.h)
         Vector3f cur_euler_angles_cd;
-        polynomial_trajectory(cur_euler_angles_cd, _trajectory_start_angles_cd, _trajectory_target_angles_cd, _trajectory_duration_ms, t);
+        polynomial_trajectory_3d(cur_euler_angles_cd, _trajectory_start_angles_cd, _trajectory_target_angles_cd, _trajectory_duration_ms, t);
 
         // update the target angles for attitude controller
         _target_roll_cd = cur_euler_angles_cd[0];
@@ -313,9 +374,6 @@ bool AC_AttitudeControl_Sub::update_trajectory()
 
         // perform attitude control
         input_euler_angle_roll_pitch_yaw(_target_roll_cd, _target_pitch_cd, _target_yaw_cd, true);
-
-        if (static_cast<int>(t) %250 == 0)
-            gcs().send_text(MAV_SEVERITY_INFO, "trajectory: %f, %f, %f, %f", t, _target_roll_cd, _target_pitch_cd, _target_yaw_cd);
 
         return false;
     }
@@ -407,10 +465,22 @@ void AC_AttitudeControl_Sub::rate_controller_run()
     // move throttle vs attitude mixing towards desired (called from here because this is conveniently called on every iteration)
     update_throttle_rpy_mix();
 
+    // calculate required thrust about each axis
+    // if a relaxing flag is active, the according thrust is set to zero
     Vector3f gyro_latest = _ahrs.get_gyro_latest();
-    _motors.set_roll(rate_target_to_motor_roll(gyro_latest.x, _rate_target_ang_vel.x));
-    _motors.set_pitch(rate_target_to_motor_pitch(gyro_latest.y, _rate_target_ang_vel.y));
-    _motors.set_yaw(rate_target_to_motor_yaw(gyro_latest.z, _rate_target_ang_vel.z));
+    float roll_out = _relax_roll ? 0.0f : rate_target_to_motor_roll(gyro_latest.x, _rate_target_ang_vel.x);
+    float pitch_out = _relax_pitch ? 0.0f : rate_target_to_motor_pitch(gyro_latest.y, _rate_target_ang_vel.y);
+    float yaw_out = _relax_yaw ? 0.0f : rate_target_to_motor_yaw(gyro_latest.z, _rate_target_ang_vel.z);
+
+    // send the required thrust to the motors
+    _motors.set_roll(roll_out);
+    _motors.set_pitch(pitch_out);
+    _motors.set_yaw(yaw_out);
+
+    // if relaxation is desired, the relaxing flags need to be activated by the top level code on each iteration
+    _relax_roll = false;
+    _relax_pitch = false;
+    _relax_yaw = false;
 
     control_monitor_update();
 
