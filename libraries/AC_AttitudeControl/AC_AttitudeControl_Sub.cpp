@@ -321,19 +321,20 @@ void AC_AttitudeControl_Sub::start_trajectory(Vector3f target_euler_angles_cd, u
 
     if (relative)
     {
-        // if relative is set to true, the relative target angles are interpreted as a rpy-sequence (312 convention)
-        // -> vehicle is first rotated about x-axis, then y- and z-axis
+        // if relative is set to true
 
         // relative rotation during trajectory
         float relative_roll = radians(target_euler_angles_cd[0] * 0.01f);
         float relative_pitch = radians(target_euler_angles_cd[1] * 0.01f);
         float relative_yaw = radians(target_euler_angles_cd[2] * 0.01f);
 
-        Quaternion relative_attitude_312;
-        relative_attitude_312.from_vector312(relative_roll, relative_pitch, relative_yaw);
+        // relative attitude (yaw-pitch-roll-sequence about consecutively rotated axes)
+        Quaternion relative_attitude;
+        relative_attitude.from_euler(relative_roll, relative_pitch, relative_yaw);
 
-        // absolute target attitude
-        Quaternion target_attitude = vehicle_attitude * relative_attitude_312;
+        // absolute target attitude (rotations applied from right to left in quaternion multiplication)
+        // so the relative rotation can be seen a ypr-rotation about the axes of the body frame
+        Quaternion target_attitude = vehicle_attitude * relative_attitude;
 
         // target euler angles as ypr sequence
         float target_roll, target_pitch, target_yaw;
