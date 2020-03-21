@@ -45,27 +45,47 @@ void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle
     switch (_current_state)
     {
         case State::ApproachingNet:
-            approach_net(forward_out, lateral_out, throttle_out);
+            approach_net();
             break;
 
         case State::AligningToNet:
-            align_to_net(forward_out, lateral_out, throttle_out);
+            align_to_net();
             break;
 
         case State::AttachingToNet:
-            attach_to_net(forward_out, lateral_out, throttle_out);
+            attach_to_net();
             break;
 
         case State::AttachingBrushes:
-            attach_brushes(forward_out, lateral_out, throttle_out);
+            attach_brushes();
             break;
 
         case State::CleaningNet:
-            clean_net(forward_out, lateral_out, throttle_out);
+            clean_net();
             break;
 
         case State::ThrottleDownwards:
-            throttle_downwards(forward_out, lateral_out, throttle_out);
+            throttle_downwards();
+            break;
+
+        case State::DetachingFromNet:
+            detach_from_net();
+            break;
+
+        case State::AligningHorizontal:
+            align_horizontal();
+            break;
+
+        case State::DetectingNet:
+            detect_net();
+            break;
+
+        case State::Surfacing:
+            surface();
+            break;
+
+        case State::WaitingAtTerminal:
+            wait_at_terminal();
             break;
 
         default:
@@ -74,32 +94,54 @@ void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle
 
     }
 
+    // write the target thrusts to be calculated by the top level flight mode logic
+    forward_out = _forward_out;
+    lateral_out = _lateral_out;
+    throttle_out = _throttle_out;
+
+    // store time stamp of this loop
+    _last_state_execution_ms = AP_HAL::millis();
 }
 
-void AP_NetCleaning::approach_net(float &forward_out, float &lateral_out, float &throttle_out)
+void AP_NetCleaning::approach_net()
 {
     // hold perpendicular heading with regard to the net and hold _initial_net_distance towards net
-    hold_heading_and_distance(forward_out, _initial_net_distance);
+    hold_heading_and_distance(_initial_net_distance);
 
     // no lateral movement, (todo: use optical flow stabilization)
-    lateral_out = 0.0f;
+    _lateral_out = 0.0f;
 
     // no throttle
-    throttle_out = 0.0f;
+    _throttle_out = 0.0f;
 
     /////////////// State Transition ////////////////
+    if (_stereo_vision.stereo_vision_healthy())
+    {
+        // current distance to the net
+        float cur_dist = _stereo_vision.get_distance();
+
+        // desired distance (m)
+        float d_dist = float(_initial_net_distance) / 100.0f;
+
+        // check whether task is finished
+        if (!_state_logic_finished && fabs(cur_dist - d_dist) < _dist_tolerance)
+        {
+            set_state_logic_finished();
+        }
+    }
+
     if (_state_logic_finished)
         switch_state_after_post_delay(State::AligningToNet, "AligningToNet", AP_NETCLEANING_APPROACHING_NET_POST_DELAY);
 }
 
-void AP_NetCleaning::align_to_net(float &forward_out, float &lateral_out, float &throttle_out)
+void AP_NetCleaning::align_to_net()
 {
     // entry action
     if (_prev_state != _current_state)
     {
-        // relative rotation: 90 degrees about x axis, 90 degrees about y axis, rpy-sequence
+        // relative rotation: 90 degrees about x axis, 90 degrees about z axis, ypr-sequence
         // values in centidegrees
-        Vector3f target_euler_angles_cd = Vector3f(9000.0f, 9000.0f, 0.0f);
+        Vector3f target_euler_angles_cd = Vector3f(9000.0f, 0.0f, 9000.0f);
         uint32_t duration_ms = 6000;
         _attitude_control.start_trajectory(target_euler_angles_cd, duration_ms, true);
         _prev_state = _current_state;
@@ -109,9 +151,9 @@ void AP_NetCleaning::align_to_net(float &forward_out, float &lateral_out, float 
     bool trajectory_finished = _attitude_control.update_trajectory();
 
     // no translational movement
-    forward_out = 0.0f;
-    lateral_out = 0.0f;
-    throttle_out = 0.0f;
+    _forward_out = 0.0f;
+    _lateral_out = 0.0f;
+    _throttle_out = 0.0f;
 
     /////////////// State Transition ////////////////
     if (!_state_logic_finished && trajectory_finished)
@@ -123,15 +165,15 @@ void AP_NetCleaning::align_to_net(float &forward_out, float &lateral_out, float 
         switch_state_after_post_delay(State::AttachingToNet, "AttachingToNet", AP_NETCLEANING_ALIGNING_TO_NET_POST_DELAY);
 }
 
-void AP_NetCleaning::attach_to_net(float &forward_out, float &lateral_out, float &throttle_out)
+void AP_NetCleaning::attach_to_net()
 {
     // run attitude controller, keep current attitude
     _attitude_control.keep_current_attitude();
 
     // translational movement
-    forward_out = 0.0f;
-    lateral_out = 0.0f;
-    throttle_out = -AP_NETCLEANING_THROTTLE_THRUST_DEFAULT;
+    _forward_out = 0.0f;
+    _lateral_out = 0.0f;
+    _throttle_out = -AP_NETCLEANING_THROTTLE_THRUST_DEFAULT;
 
     /////////////// State Transition ////////////////
     // directly set state logic to finished and go into post delay
@@ -146,15 +188,15 @@ void AP_NetCleaning::attach_to_net(float &forward_out, float &lateral_out, float
         switch_state_after_post_delay(State::AttachingBrushes, "AttachingBrushes", AP_NETCLEANING_ATTACHING_TO_NET_POST_DELAY);
 }
 
-void AP_NetCleaning::attach_brushes(float &forward_out, float &lateral_out, float &throttle_out)
+void AP_NetCleaning::attach_brushes()
 {
     // run net cleaning attitude control
     run_net_cleaning_attitude_control();
 
     // translational movement
-    forward_out = 0.0f;
-    lateral_out = 0.0f;
-    throttle_out = -AP_NETCLEANING_THROTTLE_THRUST_DEFAULT;
+    _forward_out = 0.0f;
+    _lateral_out = 0.0f;
+    _throttle_out = -AP_NETCLEANING_THROTTLE_THRUST_DEFAULT;
 
     /////////////// State Transition ////////////////
     // directly set state logic to finished and go into post delay
@@ -169,7 +211,7 @@ void AP_NetCleaning::attach_brushes(float &forward_out, float &lateral_out, floa
 }
 
 
-void AP_NetCleaning::clean_net(float &forward_out, float &lateral_out, float &throttle_out)
+void AP_NetCleaning::clean_net()
 {
     // entry action
     if (_prev_state != _current_state)
@@ -183,9 +225,9 @@ void AP_NetCleaning::clean_net(float &forward_out, float &lateral_out, float &th
     run_net_cleaning_attitude_control();
 
     // translational movement
-    forward_out = AP_NETCLEANING_FORWARD_THRUST_DEFAULT;
-    lateral_out = 0.0f;
-    throttle_out = -AP_NETCLEANING_THROTTLE_THRUST_DEFAULT;
+    _forward_out = AP_NETCLEANING_CLEANING_FORWARD_THRUST_DEFAULT;
+    _lateral_out = 0.0f;
+    _throttle_out = -AP_NETCLEANING_THROTTLE_THRUST_DEFAULT;
 
     /////////////// State Transition ////////////////
     // finish state after performing 360 degree loop
@@ -194,21 +236,35 @@ void AP_NetCleaning::clean_net(float &forward_out, float &lateral_out, float &th
         set_state_logic_finished();
     }
 
-    // apply post delay and set forward_out to zero in order to make the AUV decelerate its forwards movement
+    // apply post delay and set _forward_out to zero in order to make the AUV decelerate its forwards movement
     if (_state_logic_finished){
-        forward_out = 0.0f;
-        switch_state_after_post_delay(State::ThrottleDownwards, "ThrottleDownwards", AP_NETCLEANING_CLEANING_NET_POST_DELAY);
+        _forward_out = 0.0f;
+        if (_terminate)
+            switch_state_after_post_delay(State::DetachingFromNet, "DetachingFromNet", AP_NETCLEANING_CLEANING_NET_POST_DELAY);
+        else
+            switch_state_after_post_delay(State::ThrottleDownwards, "ThrottleDownwards", AP_NETCLEANING_CLEANING_NET_POST_DELAY);
     }
 }
 
-void AP_NetCleaning::throttle_downwards(float &forward_out, float &lateral_out, float &throttle_out)
+void AP_NetCleaning::throttle_downwards()
 {
     // entry action
     if (_prev_state != _current_state)
     {
         // start polynomial altitude trajectory moving the vehicle to a deeper lane
+
         uint32_t duration_ms = 10000;
-        _pos_control.start_altitude_trajectory(-AP_NETCLEANING_LANE_WIDTH_DEFAULT, duration_ms, true);
+        float cur_altitude = _inav.get_altitude();
+
+        if (cur_altitude < AP_NETCLEANING_LANE_WIDTH_DEFAULT - AP_NETCLEANING_MAX_CLEANING_DEPTH_DEFAULT)
+        {
+            _pos_control.start_altitude_trajectory(static_cast<float>(-AP_NETCLEANING_MAX_CLEANING_DEPTH_DEFAULT), duration_ms, false);
+            _terminate = true;
+        }
+        else
+        {
+            _pos_control.start_altitude_trajectory(static_cast<float>(-AP_NETCLEANING_LANE_WIDTH_DEFAULT), duration_ms, true);
+        }
         _prev_state = _current_state;
     }
 
@@ -219,9 +275,9 @@ void AP_NetCleaning::throttle_downwards(float &forward_out, float &lateral_out, 
     run_net_cleaning_attitude_control();
 
     // translational movement
-    forward_out = 0.0f;
-    lateral_out = 0.0f;
-    throttle_out = -AP_NETCLEANING_THROTTLE_THRUST_DEFAULT;
+    _forward_out = 0.0f;
+    _lateral_out = 0.0f;
+    _throttle_out = -AP_NETCLEANING_THROTTLE_THRUST_DEFAULT;
 
     /////////////// State Transition ////////////////
     if (!_state_logic_finished && trajectory_finished)
@@ -233,14 +289,134 @@ void AP_NetCleaning::throttle_downwards(float &forward_out, float &lateral_out, 
         switch_state_after_post_delay(State::CleaningNet, "CleaningNet", AP_NETCLEANING_THROTTLE_DOWNWARDS_POST_DELAY);
 }
 
-void AP_NetCleaning::hold_heading_and_distance(float &forward_out, float target_dist)
+void AP_NetCleaning::detach_from_net()
+{
+    // run attitude controller, keep current attitude
+    _attitude_control.keep_current_attitude();
+
+    // translational movement
+    _forward_out = 0.0f;
+    _lateral_out = 0.0f;
+    _throttle_out = AP_NETCLEANING_THROTTLE_THRUST_DEFAULT;
+
+    /////////////// State Transition ////////////////
+    // directly set state logic to finished and go into post delay
+    if (!_state_logic_finished)
+    {
+        set_state_logic_finished();
+    }
+
+    // the AUV will continue throttling away from the net and states are switched when the post delay is elapsed
+    // the post delay/ throttle should be chosen such that the AUV can move sufficiently far away from the net
+    // in order to have enough space to rotate back into horizontal orientation
+    if (_state_logic_finished)
+        switch_state_after_post_delay(State::AligningHorizontal, "AligningHorizontal", AP_NETCLEANING_DETACHING_FROM_NET_POST_DELAY);
+}
+
+void AP_NetCleaning::align_horizontal()
+{
+    // entry action
+    if (_prev_state != _current_state)
+    {
+        // relative rotation: -90 degrees about x axis, -90 degrees about y axis, ypr-sequence, exact opponent trajectory of 'AligningToNet' state
+        // values in centidegrees
+        Vector3f target_euler_angles_cd = Vector3f(-9000.0f, -9000.0f, 0.0f);
+        uint32_t duration_ms = 6000;
+        _attitude_control.start_trajectory(target_euler_angles_cd, duration_ms, true);
+        _prev_state = _current_state;
+    }
+
+    // perform rotational trajectory, update_trajectory returns true if trajectory has finished
+    bool trajectory_finished = _attitude_control.update_trajectory();
+
+    // no translational movement
+    _forward_out = 0.0f;
+    _lateral_out = 0.0f;
+    _throttle_out = 0.0f;
+
+    /////////////// State Transition ////////////////
+    if (!_state_logic_finished && trajectory_finished)
+    {
+        set_state_logic_finished();
+    }
+
+    if (_state_logic_finished)
+        switch_state_after_post_delay(State::DetectingNet, "DetectingNet", AP_NETCLEANING_ALIGNING_HORIZONTAL_POST_DELAY);
+}
+
+void AP_NetCleaning::detect_net()
+{
+    // run attitude controller, keep current attitude
+    _attitude_control.keep_current_attitude();
+
+    // move towards net until the net is detected
+    _forward_out = AP_NETCLEANING_DETECTING_NET_FORWARD_THRUST_DEFAULT;
+
+    // no lateral movement, (todo: use optical flow stabilization)
+    _lateral_out = 0.0f;
+
+    // no throttle
+    _throttle_out = 0.0f;
+
+    /////////////// State Transition ////////////////
+
+    if (_stereo_vision.stereo_vision_healthy())
+    {
+        // current distance to the net
+        float cur_dist = _stereo_vision.get_distance();
+
+        // desired distance (m)
+        float d_dist = float(_initial_net_distance) / 100.0f;
+
+        // switch state if distance to the net is close to or smaller than desired distance
+        if (cur_dist - d_dist < _dist_tolerance)
+            switch_state(State::Surfacing, "Surfacing");
+    }
+}
+
+void AP_NetCleaning::surface()
+{
+    // hold perpendicular heading with regard to the net and hold _initial_net_distance towards net
+    hold_heading_and_distance(_initial_net_distance);
+
+    // no lateral movement, (todo: use optical flow stabilization)
+    _lateral_out = 0.0f;
+
+    // no throttle
+    _throttle_out = 0.0f;
+
+    // ascend
+    float dt = (AP_HAL::millis() - _last_state_execution_ms) / 1000.0f;
+
+   bool target_alt_reached = _pos_control.climb_to_target_altitude(_home_altitude, AP_NETCLEANING_CLIMBING_RATE_CMS_DEFAULT, dt, false);
+
+    /////////////// State Transition ////////////////
+    if (target_alt_reached)
+    {
+        switch_state(State::WaitingAtTerminal, "WaitingAtTerminal");
+    }
+}
+
+void AP_NetCleaning::wait_at_terminal()
+{
+    // hold perpendicular heading with regard to the net and hold _initial_net_distance towards net
+    hold_heading_and_distance(_initial_net_distance);
+
+    // no lateral movement, (todo: use optical flow stabilization)
+    _lateral_out = 0.0f;
+
+    // no throttle
+    _throttle_out = 0.0f;
+}
+
+void AP_NetCleaning::hold_heading_and_distance(float target_dist)
 {
     /////////////////////////////////////////////////////////
     // check and update stereo vision module
 
     if (!_stereo_vision.stereo_vision_healthy())
     {
-        gcs().send_text(MAV_SEVERITY_WARNING, "NetCleaning: No STEREO_VISION messages received.");
+        _attitude_control.keep_current_attitude();
         return;
     }
 
@@ -280,14 +456,7 @@ void AP_NetCleaning::hold_heading_and_distance(float &forward_out, float target_
     float d_dist = float(target_dist) / 100.0f;
 
     // get forward command from distance controller
-    _pos_control.update_dist_controller(forward_out, cur_dist, d_dist, _sensor_intervals.stv_dt, _sensor_updates.stv_updated);
-
-    /////////////////////////////////////////////////////////////
-    // check whether task is finished
-    if (!_state_logic_finished && fabs(cur_dist - d_dist) < _dist_tolerance)
-    {
-        set_state_logic_finished();
-    }
+    _pos_control.update_dist_controller(_forward_out, cur_dist, d_dist, _sensor_intervals.stv_dt, _sensor_updates.stv_updated);
 }
 
 void AP_NetCleaning::run_net_cleaning_attitude_control()

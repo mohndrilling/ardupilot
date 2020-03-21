@@ -13,9 +13,11 @@
 
 #define AP_NETCLEANING_INITIAL_NET_DISTANCE_DEFAULT 70
 #define AP_NETCLEANING_THROTTLE_THRUST_DEFAULT 0.25f
-#define AP_NETCLEANING_FORWARD_THRUST_DEFAULT 0.25f
+#define AP_NETCLEANING_CLEANING_FORWARD_THRUST_DEFAULT 0.25f
+#define AP_NETCLEANING_DETECTING_NET_FORWARD_THRUST_DEFAULT 0.15f
 #define AP_NETCLEANING_LANE_WIDTH_DEFAULT 60
 #define AP_NETCLEANING_MAX_CLEANING_DEPTH_DEFAULT 300
+#define AP_NETCLEANING_CLIMBING_RATE_CMS_DEFAULT 10
 
 #define AP_NETCLEANING_APPROACHING_NET_POST_DELAY 4000
 #define AP_NETCLEANING_ALIGNING_TO_NET_POST_DELAY 4000
@@ -23,6 +25,9 @@
 #define AP_NETCLEANING_ATTACHING_BRUSHES_POST_DELAY 3000
 #define AP_NETCLEANING_CLEANING_NET_POST_DELAY 2000
 #define AP_NETCLEANING_THROTTLE_DOWNWARDS_POST_DELAY 2000
+#define AP_NETCLEANING_DETACHING_FROM_NET_POST_DELAY 5000
+#define AP_NETCLEANING_ALIGNING_HORIZONTAL_POST_DELAY 4000
+#define AP_NETCLEANING_DETECTING_NET_POST_DELAY 1000
 
 
 
@@ -74,7 +79,6 @@ protected:
     enum State
     {
       Inactive,
-      Waiting,
       ApproachingNet,
       AligningToNet,
       StartingBrushMotors,
@@ -82,29 +86,48 @@ protected:
       AttachingBrushes,
       CleaningNet,
       ThrottleDownwards,
-      Surfacing
+      DetachingFromNet,
+      AligningHorizontal,
+      DetectingNet,
+      Surfacing,
+      WaitingAtTerminal
     };
 
     // approach_net: contains logic of ApproachingNet state
-    void approach_net(float &forward_out, float &lateral_out, float &throttle_out);
+    void approach_net();
 
     // align_to_net: perform rotational trajectory such that brushes face the net
-    void align_to_net(float &forward_out, float &lateral_out, float &throttle_out);
+    void align_to_net();
 
     // attach_to_net: throttles along vehicles z-axis until auv touch the net.
-    void attach_to_net(float &forward_out, float &lateral_out, float &throttle_out);
+    void attach_to_net();
 
     // attach_brushes: relax yaw and pitch controller and keep throttling, so brushes properly align to the net.
-    void attach_brushes(float &forward_out, float &lateral_out, float &throttle_out);
+    void attach_brushes();
 
     // clean_net: move forwards whith activated brushes pushed to the net
-    void clean_net(float &forward_out, float &lateral_out, float &throttle_out);
+    void clean_net();
 
     // throttle_downwards: move to the next cleaning lane
-    void throttle_downwards(float &forward_out, float &lateral_out, float &throttle_out);
+    void throttle_downwards();
+
+    // detach_from_net: stabilize attitude and move AUV away from net
+    void detach_from_net();
+
+    // align_horizontal: perform rotational trajectory back to horizontl orientation
+    void align_horizontal();
+
+    // detect_net: move forwards until stereovision module detects the net again
+    void detect_net();
+
+    // surface: move back to surface while keeping fixed distance and orientation towards net
+    void surface();
+
+    // wait_at_terminal: keeping fixed distance to net without translational movement
+    void wait_at_terminal();
 
     // hold_heading_and_distance: keeps desired distance and perpendicular heading w.r.t. the net
-    void hold_heading_and_distance(float &forward_out, float target_dist);
+    void hold_heading_and_distance(float target_dist);
 
     // run_net_cleaning_attitude_control: keep nose horizontal and relax roll and pitch controller
     void run_net_cleaning_attitude_control();
@@ -143,6 +166,11 @@ protected:
         bool stv_updated; // whether stereovision module has new data
     };
 
+    // the desired translational movement of the vehicle
+    float _forward_out;
+    float _lateral_out;
+    float _throttle_out;
+
     // stores the accumulated yaw value at start of each new 360 degrees loop.
     float _initial_yaw;    
 
@@ -175,6 +203,9 @@ protected:
 
     // true if the task of the current state is fulfilled
     bool _state_logic_finished = false;
+
+    // stores time stamp of last state execution
+    uint32_t _last_state_execution_ms = 0;
 
     // the time stamp of when the task of the current state was fulfilled
     uint32_t _state_logic_finished_ms = 0;
