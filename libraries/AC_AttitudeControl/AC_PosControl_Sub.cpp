@@ -199,6 +199,7 @@ AC_PosControl_Sub::AC_PosControl_Sub(const AP_AHRS_View& ahrs, const AP_Inertial
     AC_PosControl(ahrs, inav, motors, attitude_control),
     _alt_max(0.0f),
     _alt_min(0.0f),
+    _alt_target_reached(false),
     _dist_last(0.0f),
     _pid_vel_dist(POSCONTROL_DIST_VEL_P, POSCONTROL_DIST_VEL_I, POSCONTROL_DIST_VEL_D, POSCONTROL_DIST_VEL_IMAX, POSCONTROL_DIST_VEL_FILT_HZ, POSCONTROL_DIST_VEL_DT),
     _p_pos_dist(POSCONTROL_DIST_P),
@@ -207,6 +208,31 @@ AC_PosControl_Sub::AC_PosControl_Sub(const AP_AHRS_View& ahrs, const AP_Inertial
     _p_mesh_cnt(POSCONTROL_MESH_CNT_P),
     _pid_optflx(POSCONTROL_OPTFLX_P, POSCONTROL_OPTFLX_I, POSCONTROL_OPTFLX_D, POSCONTROL_OPTFLX_IMAX, POSCONTROL_OPTFLX_FILT_HZ, POSCONTROL_OPTFLX_DT)
 {}
+
+
+bool AC_PosControl_Sub::climb_to_target_altitude(float target_alt, float climb_rate_cms, float dt, bool force_descend)
+{
+    // assure correct sign of climbing rate
+    float cur_alt = _inav.get_altitude();
+    bool ascending = target_alt > cur_alt;
+    if (    ascending && climb_rate_cms < 0.0f
+        || !ascending && climb_rate_cms > 0.0f)
+    {
+        climb_rate_cms *= -1.0f;
+    }
+
+    // update altitude target
+    set_alt_target_from_climb_rate(climb_rate_cms, dt, force_descend);
+
+    if (    ascending && _pos_target.z > target_alt
+        || !ascending && _pos_target.z < target_alt)
+    {
+        // note, this is also set to true, if the altitude reaches one of the limits alt_max and alt_min
+        _alt_target_reached = true;
+    }
+
+    return _alt_target_reached;
+}
 
 /// set_alt_target_from_climb_rate - adjusts target up or down using a climb rate in cm/s
 ///     should be called continuously (with dt set to be the expected time between calls)
@@ -220,15 +246,20 @@ void AC_PosControl_Sub::set_alt_target_from_climb_rate(float climb_rate_cms, flo
         _pos_target.z += climb_rate_cms * dt;
     }
 
+    // flag to store whether one of the upper or lower altitude limits has been reached
+    _alt_target_reached = false;
+
     // do not let target alt get above limit
     if (_alt_max < 100 && _pos_target.z > _alt_max) {
         _pos_target.z = _alt_max;
+        _alt_target_reached = true;
         _limit.pos_up = true;
     }
 
     // do not let target alt get below limit
     if (_alt_min < 0 && _alt_min < _alt_max && _pos_target.z < _alt_min) {
         _pos_target.z = _alt_min;
+        _alt_target_reached = true;
         _limit.pos_down = true;
     }
 
@@ -273,10 +304,14 @@ void AC_PosControl_Sub::set_alt_target_from_climb_rate_ff(float climb_rate_cms, 
         _pos_target.z += _vel_desired.z * dt;
     }
 
+    // flag to store whether one of the upper or lower altitude limits has been reached
+    _alt_target_reached = false;
+
     // do not let target alt get above limit
     if (_alt_max < 100 && _pos_target.z > _alt_max) {
         _pos_target.z = _alt_max;
         _limit.pos_up = true;
+        _alt_target_reached = true;
         // decelerate feed forward to zero
         _vel_desired.z = constrain_float(0.0f, _vel_desired.z-vel_change_limit, _vel_desired.z+vel_change_limit);
     }
@@ -284,6 +319,7 @@ void AC_PosControl_Sub::set_alt_target_from_climb_rate_ff(float climb_rate_cms, 
     // do not let target alt get below limit
     if (_alt_min < 0 && _alt_min < _alt_max && _pos_target.z < _alt_min) {
         _pos_target.z = _alt_min;
+        _alt_target_reached = true;
         _limit.pos_down = true;
         // decelerate feed forward to zero
         _vel_desired.z = constrain_float(0.0f, _vel_desired.z-vel_change_limit, _vel_desired.z+vel_change_limit);
@@ -309,7 +345,6 @@ void AC_PosControl_Sub::relax_alt_hold_controllers()
 
 void AC_PosControl_Sub::start_altitude_trajectory(float target_altitude, uint32_t duration, bool relative)
 {
-
     // store trajectory's starting altitude (current altitude)
     _trajectory_starting_altitude = _inav.get_altitude();
 
@@ -330,7 +365,6 @@ void AC_PosControl_Sub::start_altitude_trajectory(float target_altitude, uint32_
     _trajectory_altitude_start_ms = AP_HAL::millis();
 }
 
-
 bool AC_PosControl_Sub::update_altitude_trajectory()
 {
     // current time stamp
@@ -346,10 +380,8 @@ bool AC_PosControl_Sub::update_altitude_trajectory()
 
         return false;
     }
-    else
-    {
-        return true;
-    }
+
+    return true;
 }
 
 void AC_PosControl_Sub::update_dist_controller(float& target_forward, float cur_dist, float target_dist, float dt, bool update)
