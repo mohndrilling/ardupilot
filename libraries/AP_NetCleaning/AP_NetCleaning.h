@@ -11,11 +11,12 @@
 #include "AC_AttitudeControl/AC_PosControl_Sub.h"
 #include "AP_StereoVision/AP_StereoVision.h"
 
-#define AP_NETCLEANING_INITIAL_NET_DISTANCE_DEFAULT 70
+#define AP_NETCLEANING_INITIAL_NET_DISTANCE_DEFAULT 70.0f
+#define AP_NETCLEANING_INITIAL_NET_DISTANCE_TOLERANCE_DEFAULT 10.0f
 #define AP_NETCLEANING_THROTTLE_THRUST_DEFAULT 0.25f
 #define AP_NETCLEANING_CLEANING_FORWARD_THRUST_DEFAULT 0.25f
 #define AP_NETCLEANING_DETECTING_NET_FORWARD_THRUST_DEFAULT 0.15f
-#define AP_NETCLEANING_LANE_WIDTH_DEFAULT 60
+#define AP_NETCLEANING_LANE_WIDTH_DEFAULT 60.0f
 #define AP_NETCLEANING_MAX_CLEANING_DEPTH_DEFAULT 300
 #define AP_NETCLEANING_CLIMBING_RATE_CMS_DEFAULT 10
 
@@ -46,6 +47,7 @@ public:
                     _stereo_vision(stereo_vision),
                     _current_state(State::ApproachingNet),
                     _prev_state(State::Inactive),
+                    _dist_tolerance(AP_NETCLEANING_INITIAL_NET_DISTANCE_TOLERANCE_DEFAULT),
                     _loop_progress(-1)
     {
         AP_Param::setup_object_defaults(this, var_info);
@@ -57,7 +59,7 @@ public:
     // User settable parameters
     static const struct AP_Param::GroupInfo var_info[];
 
-    // init net tracking
+    // init net cleaning
     void init();
 
     // run: main function running the state machine
@@ -69,7 +71,7 @@ public:
     // get 360 degrees loop progress in percent (further sent via mavlink)
     float get_loop_progress() { return _loop_progress; }
 
-    // get net tracking state to be sent via mavlink
+    // get net cleaning state to be sent via mavlink
     uint8_t get_state() { return _current_state; }
 
     // resets internal variables to default values
@@ -172,21 +174,18 @@ protected:
     float _throttle_out;
 
     // stores the accumulated yaw value at start of each new 360 degrees loop.
-    float _initial_yaw;    
+    float _initial_yaw;
 
-    // the heading (yaw angle in radians) at start of net tracking
-    float _home_yaw;
-
-    // the altitude at start of net tracking
+    // the altitude at start of net cleaning
     float _home_altitude;
 
     // indicates whether maximum depth is reached
-    bool _terminate = false;
+    bool _terminate;
 
-    // current net tracking State
+    // current net cleaning State
     State _current_state;
 
-    // previous net tracking State
+    // previous net cleaning State
     State _prev_state;
 
     // 360 degrees loop progress in percent
@@ -195,20 +194,20 @@ protected:
     // sensor information
     SensorIntervals _sensor_intervals;
     SensorUpdated _sensor_updates;
-    uint32_t _last_stereo_update_ms = 0;
+    uint32_t _last_stereo_update_ms;
 
     /////////////// state specific variables ////////////////
 
     ///////// shared between states
 
     // true if the task of the current state is fulfilled
-    bool _state_logic_finished = false;
+    bool _state_logic_finished;
 
     // stores time stamp of last state execution
-    uint32_t _last_state_execution_ms = 0;
+    uint32_t _last_state_execution_ms;
 
     // the time stamp of when the task of the current state was fulfilled
-    uint32_t _state_logic_finished_ms = 0;
+    uint32_t _state_logic_finished_ms;
 
     ///////// ApproachingNet
 
@@ -216,7 +215,7 @@ protected:
     AP_Int16 _initial_net_distance;
 
     // tolerance for target distance (m)
-    float _dist_tolerance = 0.1;
+    float _dist_tolerance;
 
 public:
 };

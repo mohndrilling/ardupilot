@@ -25,17 +25,19 @@ void AP_NetCleaning::reset()
 
 void AP_NetCleaning::init()
 {
-    _initial_yaw = _attitude_control.get_accumulated_yaw();
-
-    // home position (defined by heading and altitude for now)
-    _home_yaw = _ahrs.get_current_yaw();
-    _home_altitude = _inav.get_altitude();
-
     // update time stamps
     _last_stereo_update_ms = _stereo_vision.get_last_stv_update_ms();
 
     // set initial state
     _current_state = State::ApproachingNet;
+
+    // miscellaneous initial parameters
+    _terminate = false;
+    _state_logic_finished = false;
+    _last_state_execution_ms = 0;
+    _state_logic_finished_ms = 0;
+    _loop_progress = -1;
+
 }
 
 void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle_out)
@@ -105,6 +107,13 @@ void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle
 
 void AP_NetCleaning::approach_net()
 {
+    // entry action
+    if (_prev_state != _current_state)
+    {
+        // store the home altitude at the very start of net cleaning
+        _home_altitude = _inav.get_altitude();
+    }
+
     // hold perpendicular heading with regard to the net and hold _initial_net_distance towards net
     hold_heading_and_distance(_initial_net_distance);
 
@@ -124,7 +133,7 @@ void AP_NetCleaning::approach_net()
         float d_dist = float(_initial_net_distance) / 100.0f;
 
         // check whether task is finished
-        if (!_state_logic_finished && fabs(cur_dist - d_dist) < _dist_tolerance)
+        if (!_state_logic_finished && fabs(cur_dist - d_dist) < _dist_tolerance / 100.0f)
         {
             set_state_logic_finished();
         }
@@ -369,7 +378,7 @@ void AP_NetCleaning::detect_net()
         float d_dist = float(_initial_net_distance) / 100.0f;
 
         // switch state if distance to the net is close to or smaller than desired distance
-        if (cur_dist - d_dist < _dist_tolerance)
+        if (cur_dist - d_dist < _dist_tolerance / 100.0f)
             switch_state(State::Surfacing, "Surfacing");
     }
 }
