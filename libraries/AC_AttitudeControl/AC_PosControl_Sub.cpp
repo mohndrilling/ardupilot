@@ -215,8 +215,8 @@ bool AC_PosControl_Sub::climb_to_target_altitude(float target_alt, float climb_r
     // assure correct sign of climbing rate
     float cur_alt = _inav.get_altitude();
     bool ascending = target_alt > cur_alt;
-    if (    ascending && climb_rate_cms < 0.0f
-        || !ascending && climb_rate_cms > 0.0f)
+    if (    (ascending && climb_rate_cms < 0.0f)
+        || (!ascending && climb_rate_cms > 0.0f))
     {
         climb_rate_cms *= -1.0f;
     }
@@ -224,8 +224,8 @@ bool AC_PosControl_Sub::climb_to_target_altitude(float target_alt, float climb_r
     // update altitude target
     set_alt_target_from_climb_rate(climb_rate_cms, dt, force_descend);
 
-    if (    ascending && _pos_target.z > target_alt
-        || !ascending && _pos_target.z < target_alt)
+    if (    (ascending && _pos_target.z > target_alt)
+        || (!ascending && _pos_target.z < target_alt))
     {
         // note, this is also set to true, if the altitude reaches one of the limits alt_max and alt_min
         _alt_target_reached = true;
