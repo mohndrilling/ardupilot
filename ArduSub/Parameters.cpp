@@ -36,6 +36,21 @@ const AP_Param::Info Sub::var_info[] = {
     // @User: Standard
     GSCALAR(surface_depth, "SURFACE_DEPTH", SURFACE_DEPTH_DEFAULT),
 
+    // @Param: AUTO_ARM
+    // @DisplayName: If enabled, the vehicle arms automatically when exceeding a certain depth
+    // @Description:  If enabled, the vehicle arms automatically when exceeding a certain depth
+    // @Values: 0:Disabled, 1:Enabled
+    // @User: Standard
+    GSCALAR(auto_arming, "AUTO_ARM", AUTO_ARMING_DEFAULT),
+
+    // @Param: AUTO_ARM_DEPTH
+    // @DisplayName: The depth at below which the vehicle automatically arms
+    // @Description:  The depth at below which the vehicle automatically arms
+    // @Units: cm
+    // @Range: -200 0
+    // @User: Standard
+    GSCALAR(auto_arming_depth, "AUTO_ARM_DEPTH", AUTO_ARMING_DEPTH_DEFAULT),
+
     // @Param: CONTROL_FRAME
     // @DisplayName: Control frame where pilot commands are interpreted in
     // @Description:  Control coordinate frame where pilot commands are interpreted in
