@@ -47,6 +47,9 @@ Sub::Sub()
     sensor_health.baro = true;
     sensor_health.compass = true;
 
+    // prohibit auto arming initially
+    auto_arming_allowed = false;
+
 #if CONFIG_HAL_BOARD != HAL_BOARD_SITL
     failsafe.pilot_input = true;
 #endif

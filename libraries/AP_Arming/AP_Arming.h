@@ -38,6 +38,7 @@ public:
         MAVLINK,
         AUXSWITCH,
         MOTORTEST,
+        AUTO,
     };
 
     enum class Required {

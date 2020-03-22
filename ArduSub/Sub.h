@@ -344,6 +344,7 @@ private:
                            _failsafe_priorities};
 
     AP_Arming_Sub arming;
+    bool auto_arming_allowed;
 
     // Altitude
     // The cm/s we are moving up or down based on filtered data - Positive = UP
@@ -610,6 +611,7 @@ private:
     void set_bottomed(bool at_bottom);
     bool init_arm_motors(AP_Arming::Method method);
     void init_disarm_motors();
+    void check_auto_arm_motors();
     void update_control_frame();
     void motors_output();    
     void update_throttle_hover();

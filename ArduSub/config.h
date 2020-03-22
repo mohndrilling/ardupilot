@@ -46,6 +46,14 @@
 # define SURFACE_DEPTH_DEFAULT -10.0f // pressure sensor reading 10cm depth means craft is considered surfaced
 #endif
 
+#ifndef AUTO_ARMING_DEFAULT
+# define AUTO_ARMING_DEFAULT DISABLED
+#endif
+
+#ifndef AUTO_ARMING_DEPTH_DEFAULT
+# define AUTO_ARMING_DEPTH_DEFAULT 30.0f
+#endif
+
 #ifndef CONTROL_FRAME_DEFAULT
 # define CONTROL_FRAME_DEFAULT CF_Body // Coordinate frame with regard to which the pilot commands are interpreted to
 #endif

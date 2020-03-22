@@ -125,6 +125,33 @@ void Sub::init_disarm_motors()
     clear_input_hold();
 }
 
+// check_auto_arm_motors - automatically arm motors if auto arming enabled and arming depth reached
+void Sub::check_auto_arm_motors()
+{
+    // return immediately if we are already disarmed
+    if (motors.armed() || g.auto_arming == DISABLED) {
+        return;
+    }
+
+    // get current altitude in cm
+    float cur_alt = inertial_nav.get_altitude();
+
+    if (cur_alt > g.surface_depth)
+    {
+        auto_arming_allowed = true;
+    }
+
+    // arm motors if the current altitude is lower than the minimum auto arming depth
+    if (cur_alt < -g.auto_arming_depth && auto_arming_allowed)
+    {
+        init_arm_motors(AP_Arming::Method::AUTO);
+        auto_arming_allowed = false; // the vehicle has to surface before it's allowed to auto arm again
+    }
+
+    // TODO: Implement a disarming routine as well. E.g. make the vehicle ascending, when unarmed.
+    // It may be automatically disarmed above the auto_arming_depth then.
+}
+
 // update_control_frame - sends the rotation matrix of the current control frame to the motor classes
 // the motor classes transform the thrust factors of each thruster accordingly
 void Sub::update_control_frame()

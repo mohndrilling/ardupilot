@@ -277,6 +277,9 @@ void Sub::one_hz_loop()
     }
 
     if (!motors.armed()) {
+        // arm the vehicle automatically, if auto arming enabled and conditions met
+        check_auto_arm_motors();
+
         // make it possible to change ahrs orientation at runtime during initial config
         ahrs.update_orientation();
 

@@ -194,6 +194,8 @@ public:
         k_param_control_frame, // with regard to which coordinate frame the pilot commands are interpreted to
         k_param_forward_filt,
         k_param_lateral_filt,
+        k_param_auto_arming,
+        k_param_auto_arming_depth,
 
         // Acro Mode parameters
         k_param_acro_yaw_p = 220, // Used in all modes for get_pilot_desired_yaw_rate
@@ -282,6 +284,8 @@ public:
     AP_Int8         numGainSettings;
     AP_Float        throttle_gain;
     AP_Int8         control_frame;
+    AP_Int8         auto_arming;
+    AP_Float        auto_arming_depth;
 
     AP_Int16        lights_steps;
 
