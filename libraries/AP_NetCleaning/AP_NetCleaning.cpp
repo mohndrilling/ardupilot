@@ -311,9 +311,10 @@ void AP_NetCleaning::clean_net()
         set_state_logic_finished();
     }
 
-    // apply post delay and set _forward_out to zero in order to make the AUV decelerate its forwards movement
+    // apply post delay and set _forward_out negative in order to make the AUV decelerate its forwards movement
+    // Todo: The forward movement should be controlled by using camera-based ego motion estimation
     if (_state_logic_finished){
-        _forward_out = 0.0f;
+        _forward_out = -AP_NETCLEANING_CLEANING_FORWARD_THRUST_DEFAULT;;
         if (_terminate)
             switch_state_after_post_delay(State::DetachingFromNet, "DetachingFromNet", AP_NETCLEANING_CLEANING_NET_POST_DELAY);
         else
