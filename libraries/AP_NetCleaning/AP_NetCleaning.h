@@ -11,24 +11,26 @@
 #include "AC_AttitudeControl/AC_PosControl_Sub.h"
 #include "AP_StereoVision/AP_StereoVision.h"
 
-#define AP_NETCLEANING_INITIAL_NET_DISTANCE_DEFAULT 70.0f
+#define AP_NETCLEANING_INITIAL_NET_DISTANCE_DEFAULT 50.0f
 #define AP_NETCLEANING_INITIAL_NET_DISTANCE_TOLERANCE_DEFAULT 10.0f
-#define AP_NETCLEANING_THROTTLE_THRUST_DEFAULT 0.25f
+#define AP_NETCLEANING_APPROACHING_THROTTLE_THRUST_DEFAULT 0.2f
+#define AP_NETCLEANING_CLEANING_THROTTLE_THRUST_DEFAULT 0.25f
 #define AP_NETCLEANING_CLEANING_FORWARD_THRUST_DEFAULT 0.25f
 #define AP_NETCLEANING_DETECTING_NET_FORWARD_THRUST_DEFAULT 0.15f
 #define AP_NETCLEANING_LANE_WIDTH_DEFAULT 60.0f
-#define AP_NETCLEANING_MAX_CLEANING_DEPTH_DEFAULT 300
+#define AP_NETCLEANING_START_CLEANING_DEPTH_DEFAULT 100
+#define AP_NETCLEANING_FINISH_CLEANING_DEPTH_DEFAULT 300
 #define AP_NETCLEANING_CLIMBING_RATE_CMS_DEFAULT 10
 
-#define AP_NETCLEANING_APPROACHING_NET_POST_DELAY 4000
-#define AP_NETCLEANING_ALIGNING_TO_NET_POST_DELAY 4000
-#define AP_NETCLEANING_ATTACHING_TO_NET_POST_DELAY 5000
+#define AP_NETCLEANING_APPROACHING_INIT_ALTITUDE_POST_DELAY 3000
+#define AP_NETCLEANING_HOLDING_NET_DISTANCE_POST_DELAY 6000
+#define AP_NETCLEANING_ALIGNING_VERTICAL_POST_DELAY 4000
+#define AP_NETCLEANING_APPROACHING_NET_POST_DELAY 7000
 #define AP_NETCLEANING_ATTACHING_BRUSHES_POST_DELAY 3000
 #define AP_NETCLEANING_CLEANING_NET_POST_DELAY 2000
 #define AP_NETCLEANING_THROTTLE_DOWNWARDS_POST_DELAY 2000
 #define AP_NETCLEANING_DETACHING_FROM_NET_POST_DELAY 5000
 #define AP_NETCLEANING_ALIGNING_HORIZONTAL_POST_DELAY 4000
-#define AP_NETCLEANING_DETECTING_NET_POST_DELAY 1000
 
 
 
@@ -45,7 +47,7 @@ public:
                     _attitude_control(attitude_control),
                     _pos_control(pos_control),
                     _stereo_vision(stereo_vision),
-                    _current_state(State::ApproachingNet),
+                    _current_state(State::Inactive),
                     _prev_state(State::Inactive),
                     _dist_tolerance(AP_NETCLEANING_INITIAL_NET_DISTANCE_TOLERANCE_DEFAULT),
                     _loop_progress(-1)
@@ -81,28 +83,38 @@ protected:
     enum State
     {
       Inactive,
-      ApproachingNet,
-      AligningToNet,
+      ApproachingInitialAltitude,
+      DetectingNetInitially,
+      HoldingNetDistance,
+      AligningVertical,
       StartingBrushMotors,
-      AttachingToNet,
+      ApproachingNet,
       AttachingBrushes,
       CleaningNet,
       ThrottleDownwards,
       DetachingFromNet,
       AligningHorizontal,
-      DetectingNet,
+      DetectingNetTerminally,
       Surfacing,
       WaitingAtTerminal
     };
 
-    // approach_net: contains logic of ApproachingNet state
+    //////////////////////// State Logic Functions ////////////////////////////////////////////
+
+    // approach_initial_altitude: Move to initial altitude where net cleaning is about to start
+    void approach_initial_altitude();
+
+    // detect_net_initially: move forwards until stereovision module detects the net
+    void detect_net_initially();
+
+    // hold_net_distance(): run distance controller and keep initial distance to net
+    void hold_net_distance();
+
+    // align_vertical: perform rotational trajectory such that brushes face the net
+    void align_vertical();
+
+    // approach_net: throttles along vehicles z-axis until auv touch the net.
     void approach_net();
-
-    // align_to_net: perform rotational trajectory such that brushes face the net
-    void align_to_net();
-
-    // attach_to_net: throttles along vehicles z-axis until auv touch the net.
-    void attach_to_net();
 
     // attach_brushes: relax yaw and pitch controller and keep throttling, so brushes properly align to the net.
     void attach_brushes();
@@ -119,14 +131,18 @@ protected:
     // align_horizontal: perform rotational trajectory back to horizontl orientation
     void align_horizontal();
 
-    // detect_net: move forwards until stereovision module detects the net again
-    void detect_net();
+    // detect_net_terminally: move forwards until stereovision module detects the net again
+    void detect_net_terminally();
 
     // surface: move back to surface while keeping fixed distance and orientation towards net
     void surface();
 
     // wait_at_terminal: keeping fixed distance to net without translational movement
     void wait_at_terminal();
+
+    ////////////////// Helper Functions //////////////////////////////////////////////////
+    // detect_net_terminally: move forwards until stereovision module detects the net again
+    void detect_net();
 
     // hold_heading_and_distance: keeps desired distance and perpendicular heading w.r.t. the net
     void hold_heading_and_distance(float target_dist);
