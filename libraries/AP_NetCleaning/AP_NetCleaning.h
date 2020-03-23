@@ -21,6 +21,8 @@
 #define AP_NETCLEANING_START_CLEANING_DEPTH_DEFAULT 100.0f
 #define AP_NETCLEANING_FINISH_CLEANING_DEPTH_DEFAULT 300.0f
 #define AP_NETCLEANING_CLIMBING_RATE_CMS_DEFAULT 10.0f
+#define AP_NETCLEANING_ROT_TRAJECTORY_DURATION_DEFAULT 10.0f
+#define AP_NETCLEANING_ALT_TRAJECTORY_DURATION_DEFAULT 10.0f
 
 #define AP_NETCLEANING_ADJUSTED_BY_OPERATOR_POST_DELAY 15000
 #define AP_NETCLEANING_APPROACHING_INIT_ALTITUDE_POST_DELAY 3000
@@ -257,6 +259,12 @@ protected:
 
     // Climbing rate when changing altitudes in cm/s
     AP_Float _climb_rate;
+
+    // Duration of rotational trajectory when aligning to net in s
+    AP_Float _rot_traj_duration;
+
+    // Duration of altitude trajectory when aligning to net in s
+    AP_Float _alt_traj_duration;
 
 public:
 };
