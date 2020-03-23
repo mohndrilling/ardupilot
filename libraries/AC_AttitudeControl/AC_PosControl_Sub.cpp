@@ -250,14 +250,14 @@ void AC_PosControl_Sub::set_alt_target_from_climb_rate(float climb_rate_cms, flo
     _alt_target_reached = false;
 
     // do not let target alt get above limit
-    if (_alt_max < 100 && _pos_target.z > _alt_max) {
+    if (_alt_max < 100 && _pos_target.z > _alt_max && climb_rate_cms > 0.0f) {
         _pos_target.z = _alt_max;
-        _alt_target_reached = true;
         _limit.pos_up = true;
+        _alt_target_reached = true;
     }
 
     // do not let target alt get below limit
-    if (_alt_min < 0 && _alt_min < _alt_max && _pos_target.z < _alt_min) {
+    if (_alt_min < 0 && _alt_min < _alt_max && _pos_target.z < _alt_min && climb_rate_cms < 0.0f) {
         _pos_target.z = _alt_min;
         _alt_target_reached = true;
         _limit.pos_down = true;
@@ -308,7 +308,7 @@ void AC_PosControl_Sub::set_alt_target_from_climb_rate_ff(float climb_rate_cms, 
     _alt_target_reached = false;
 
     // do not let target alt get above limit
-    if (_alt_max < 100 && _pos_target.z > _alt_max) {
+    if (_alt_max < 100 && _pos_target.z > _alt_max && climb_rate_cms > 0.0f) {
         _pos_target.z = _alt_max;
         _limit.pos_up = true;
         _alt_target_reached = true;
@@ -317,7 +317,7 @@ void AC_PosControl_Sub::set_alt_target_from_climb_rate_ff(float climb_rate_cms, 
     }
 
     // do not let target alt get below limit
-    if (_alt_min < 0 && _alt_min < _alt_max && _pos_target.z < _alt_min) {
+    if (_alt_min < 0 && _alt_min < _alt_max && _pos_target.z < _alt_min && climb_rate_cms < 0.0f) {
         _pos_target.z = _alt_min;
         _alt_target_reached = true;
         _limit.pos_down = true;
