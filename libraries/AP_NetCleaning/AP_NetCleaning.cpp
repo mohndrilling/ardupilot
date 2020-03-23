@@ -6,14 +6,92 @@ extern const AP_HAL::HAL& hal;
 
 const AP_Param::GroupInfo AP_NetCleaning::var_info[] = {
 
-    // @Param: INIT_DIST
+    // @Param: NET_DST
     // @DisplayName: Distance of the AUV when aligning to the net
     // @Description: Distance of the AUV when aligning to the net
     // @Units: cm
     // @Range: 10.0 100.0
     // @Increment: 1
-    // @User: Advanced
-    AP_GROUPINFO("INIT_DIST", 0, AP_NetCleaning, _initial_net_distance, AP_NETCLEANING_INITIAL_NET_DISTANCE_DEFAULT),
+    // @User: Standard
+    AP_GROUPINFO("NET_DST", 0, AP_NetCleaning, _init_net_dist, AP_NETCLEANING_INITIAL_NET_DISTANCE_DEFAULT),
+
+    // @Param: DST_TOL
+    // @DisplayName: Tolerance of the AUV's distance to the net
+    // @Description: Tolerance of the AUV's distance to the net
+    // @Units: cm
+    // @Range: 0.0 50.0
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("DST_TOL", 1, AP_NetCleaning, _init_net_dist_tolerance, AP_NETCLEANING_INITIAL_NET_DISTANCE_TOLERANCE_DEFAULT),
+
+    // @Param: APPR_THR
+    // @DisplayName: Throttle thrust when approaching net
+    // @Description: Throttle thrust when approaching net
+    // @Range: 0.0 1.0
+    // @Increment: 0.05
+    // @User: Standard
+    AP_GROUPINFO("APPR_THR", 2, AP_NetCleaning, _approach_thr_thrust, AP_NETCLEANING_APPROACHING_THROTTLE_THRUST_DEFAULT),
+
+    // @Param: CLEAN_THR
+    // @DisplayName: Throttle thrust when cleaning net
+    // @Description: Throttle thrust when cleaning net
+    // @Range: 0.0 1.0
+    // @Increment: 0.05
+    // @User: Standard
+    AP_GROUPINFO("CLEAN_THR", 3, AP_NetCleaning, _cleaning_thr_thrust, AP_NETCLEANING_CLEANING_THROTTLE_THRUST_DEFAULT),
+
+    // @Param: APPR_FORW
+    // @DisplayName: Forward thrust when detecting net
+    // @Description: Forward thrust when detecting net
+    // @Range: 0.0 1.0
+    // @Increment: 0.05
+    // @User: Standard
+    AP_GROUPINFO("APPR_FORW", 4, AP_NetCleaning, _detect_net_forw_trust, AP_NETCLEANING_DETECTING_NET_FORWARD_THRUST_DEFAULT),
+
+    // @Param: CLEAN_FORW
+    // @DisplayName: Forward thrust when cleaning net
+    // @Description: Forward thrust when cleaning net
+    // @Range: 0.0 1.0
+    // @Increment: 0.05
+    // @User: Standard
+    AP_GROUPINFO("CLEAN_FORW", 5, AP_NetCleaning, _cleaning_forw_thrust, AP_NETCLEANING_CLEANING_FORWARD_THRUST_DEFAULT),
+
+    // @Param: LANE_WIDTH
+    // @DisplayName: Lane width between two cleaning levels
+    // @Description: Lane width between two cleaning levels
+    // @Units: cm
+    // @Range: 10.0 100.0
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("LANE_WIDTH", 6, AP_NetCleaning, _lane_width, AP_NETCLEANING_LANE_WIDTH_DEFAULT),
+
+    // @Param: STRT_DEPTH
+    // @DisplayName: Altitude at which the net cleaning starts
+    // @Description: Altitude at which the net cleaning starts
+    // @Units: cm
+    // @Range: 10.0 1000.0
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("STRT_DEPTH", 7, AP_NetCleaning, _start_cleaning_altitude, AP_NETCLEANING_START_CLEANING_DEPTH_DEFAULT),
+
+    // @Param: END_DEPTH
+    // @DisplayName: Altitude at which the net cleaning ends
+    // @Description: Altitude at which the net cleaning ends
+    // @Units: cm
+    // @Range: 10.0 3000.0
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("END_DEPTH", 8, AP_NetCleaning, _finish_cleaning_altitude, AP_NETCLEANING_FINISH_CLEANING_DEPTH_DEFAULT),
+
+
+    // @Param: CLIMB_RATE
+    // @DisplayName: Climbing rate when changing altitudes in cm/s
+    // @Description: Climbing rate when changing altitudes in cm/s
+    // @Units: cm/s
+    // @Range: 0.0 100.0
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("CLIMB_RATE", 9, AP_NetCleaning, _climb_rate, AP_NETCLEANING_CLIMBING_RATE_CMS_DEFAULT),
 
     AP_GROUPEND
 };
@@ -164,15 +242,15 @@ void AP_NetCleaning::approach_initial_altitude()
     // whether the starting altitude for net cleaning is reached
     bool target_alt_reached;
 
-    if (AP_NETCLEANING_START_CLEANING_DEPTH_DEFAULT != 0 && !_state_logic_finished)
+    if (_start_cleaning_altitude > 0 && !_state_logic_finished)
     {
         float dt = (AP_HAL::millis() - _last_state_execution_ms) / 1000.0f;
 
-        target_alt_reached = _pos_control.climb_to_target_altitude(-AP_NETCLEANING_START_CLEANING_DEPTH_DEFAULT, -AP_NETCLEANING_CLIMBING_RATE_CMS_DEFAULT, dt, false);
+        target_alt_reached = _pos_control.climb_to_target_altitude(-_start_cleaning_altitude, -_climb_rate, dt, false);
     }
     else
     {
-        // if the starting altitude is set to zero, it is ignored and net cleaning started right away
+        // if the start cleaning altitude is set to zero, it is ignored and net cleaning started right away
         target_alt_reached = true;
     }
 
@@ -205,8 +283,8 @@ void AP_NetCleaning::hold_net_distance()
         _prev_state = _current_state;
     }
 
-    // hold perpendicular heading with regard to the net and hold _initial_net_distance towards net
-    hold_heading_and_distance(_initial_net_distance);
+    // hold perpendicular heading with regard to the net and hold _init_net_dist towards net
+    hold_heading_and_distance(_init_net_dist);
 
     // no lateral movement, (todo: use optical flow stabilization)
     _lateral_out = 0.0f;
@@ -221,10 +299,10 @@ void AP_NetCleaning::hold_net_distance()
         float cur_dist = _stereo_vision.get_distance();
 
         // desired distance (m)
-        float d_dist = float(_initial_net_distance) / 100.0f;
+        float d_dist = float(_init_net_dist) / 100.0f;
 
         // check whether task is finished
-        if (!_state_logic_finished && fabs(cur_dist - d_dist) < _dist_tolerance / 100.0f)
+        if (!_state_logic_finished && fabs(cur_dist - d_dist) < _init_net_dist_tolerance / 100.0f)
         {
             set_state_logic_finished();
         }
@@ -273,7 +351,7 @@ void AP_NetCleaning::approach_net()
     // translational movement
     _forward_out = 0.0f;
     _lateral_out = 0.0f;
-    _throttle_out = -AP_NETCLEANING_APPROACHING_THROTTLE_THRUST_DEFAULT;
+    _throttle_out = -_approach_thr_thrust;
 
     /////////////// State Transition ////////////////
     // directly set state logic to finished and go into post delay
@@ -296,7 +374,7 @@ void AP_NetCleaning::attach_brushes()
     // translational movement
     _forward_out = 0.0f;
     _lateral_out = 0.0f;
-    _throttle_out = -AP_NETCLEANING_CLEANING_THROTTLE_THRUST_DEFAULT;
+    _throttle_out = -_cleaning_thr_thrust;
 
     /////////////// State Transition ////////////////
     // directly set state logic to finished and go into post delay
@@ -325,9 +403,9 @@ void AP_NetCleaning::clean_net()
     run_net_cleaning_attitude_control();
 
     // translational movement
-    _forward_out = AP_NETCLEANING_CLEANING_FORWARD_THRUST_DEFAULT;
+    _forward_out = _cleaning_forw_thrust;
     _lateral_out = 0.0f;
-    _throttle_out = -AP_NETCLEANING_CLEANING_THROTTLE_THRUST_DEFAULT;
+    _throttle_out = -_cleaning_thr_thrust;
 
     /////////////// State Transition ////////////////
     // finish state after performing 360 degree loop
@@ -339,7 +417,7 @@ void AP_NetCleaning::clean_net()
     // apply post delay and set _forward_out negative in order to make the AUV decelerate its forwards movement
     // Todo: The forward movement should be controlled by using camera-based ego motion estimation
     if (_state_logic_finished){
-        _forward_out = -AP_NETCLEANING_CLEANING_FORWARD_THRUST_DEFAULT;;
+        _forward_out = -_cleaning_forw_thrust;;
         if (_terminate)
             switch_state_after_post_delay(State::DetachingFromNet, "DetachingFromNet", AP_NETCLEANING_CLEANING_NET_POST_DELAY);
         else
@@ -357,14 +435,14 @@ void AP_NetCleaning::throttle_downwards()
         uint32_t duration_ms = 10000;
         float cur_altitude = _inav.get_altitude();
 
-        if (cur_altitude < AP_NETCLEANING_LANE_WIDTH_DEFAULT - AP_NETCLEANING_FINISH_CLEANING_DEPTH_DEFAULT)
+        if (cur_altitude < _lane_width - _finish_cleaning_altitude)
         {
-            _pos_control.start_altitude_trajectory(static_cast<float>(-AP_NETCLEANING_FINISH_CLEANING_DEPTH_DEFAULT), duration_ms, false);
+            _pos_control.start_altitude_trajectory(static_cast<float>(-_finish_cleaning_altitude), duration_ms, false);
             _terminate = true;
         }
         else
         {
-            _pos_control.start_altitude_trajectory(static_cast<float>(-AP_NETCLEANING_LANE_WIDTH_DEFAULT), duration_ms, true);
+            _pos_control.start_altitude_trajectory(static_cast<float>(-_lane_width), duration_ms, true);
         }
         _prev_state = _current_state;
     }
@@ -378,7 +456,7 @@ void AP_NetCleaning::throttle_downwards()
     // translational movement
     _forward_out = 0.0f;
     _lateral_out = 0.0f;
-    _throttle_out = -AP_NETCLEANING_CLEANING_THROTTLE_THRUST_DEFAULT;
+    _throttle_out = -_cleaning_thr_thrust;
 
     /////////////// State Transition ////////////////
     if (!_state_logic_finished && trajectory_finished)
@@ -398,7 +476,7 @@ void AP_NetCleaning::detach_from_net()
     // translational movement
     _forward_out = 0.0f;
     _lateral_out = 0.0f;
-    _throttle_out = AP_NETCLEANING_CLEANING_THROTTLE_THRUST_DEFAULT;
+    _throttle_out = _cleaning_thr_thrust;
 
     /////////////// State Transition ////////////////
     // directly set state logic to finished and go into post delay
@@ -455,8 +533,8 @@ void AP_NetCleaning::detect_net_terminally()
 
 void AP_NetCleaning::surface()
 {
-    // hold perpendicular heading with regard to the net and hold _initial_net_distance towards net
-    hold_heading_and_distance(_initial_net_distance);
+    // hold perpendicular heading with regard to the net and hold _init_net_dist towards net
+    hold_heading_and_distance(_init_net_dist);
 
     // no lateral movement, (todo: use optical flow stabilization)
     _lateral_out = 0.0f;
@@ -467,7 +545,7 @@ void AP_NetCleaning::surface()
     // ascend
     float dt = (AP_HAL::millis() - _last_state_execution_ms) / 1000.0f;
 
-   bool target_alt_reached = _pos_control.climb_to_target_altitude(_home_altitude, AP_NETCLEANING_CLIMBING_RATE_CMS_DEFAULT, dt, false);
+   bool target_alt_reached = _pos_control.climb_to_target_altitude(_home_altitude, _climb_rate, dt, false);
 
     /////////////// State Transition ////////////////
     if (target_alt_reached)
@@ -478,8 +556,8 @@ void AP_NetCleaning::surface()
 
 void AP_NetCleaning::wait_at_terminal()
 {
-    // hold perpendicular heading with regard to the net and hold _initial_net_distance towards net
-    hold_heading_and_distance(_initial_net_distance);
+    // hold perpendicular heading with regard to the net and hold _init_net_dist towards net
+    hold_heading_and_distance(_init_net_dist);
 
     // no lateral movement, (todo: use optical flow stabilization)
     _lateral_out = 0.0f;
@@ -494,7 +572,7 @@ void AP_NetCleaning::detect_net()
     _attitude_control.keep_current_attitude();
 
     // move towards net until the net is detected
-    _forward_out = AP_NETCLEANING_DETECTING_NET_FORWARD_THRUST_DEFAULT;
+    _forward_out = _detect_net_forw_trust;
 
     // no lateral movement, (todo: use optical flow stabilization)
     _lateral_out = 0.0f;
@@ -510,10 +588,10 @@ void AP_NetCleaning::detect_net()
         float cur_dist = _stereo_vision.get_distance();
 
         // desired distance (m)
-        float d_dist = float(_initial_net_distance) / 100.0f;
+        float d_dist = float(_init_net_dist) / 100.0f;
 
         // switch state if distance to the net is close to or smaller than desired distance
-        if (cur_dist - d_dist < _dist_tolerance / 100.0f)
+        if (cur_dist - d_dist < _init_net_dist_tolerance / 100.0f)
             set_state_logic_finished();
     }
 }
@@ -570,7 +648,7 @@ void AP_NetCleaning::hold_heading_and_distance(float target_dist)
     // constrain forward velocity in order to prevent rapid movement when the distance controller activates
     // todo: check for any issues regarding integral windup (integrator of distance pid controller keeps charging while forward output is saturated)
     // this may lead to overshooting (windup effect) but shouldn't be a problem here as the integral term of the pid controller is usually chosen to be relatively small
-    _forward_out = constrain_float(_forward_out, -AP_NETCLEANING_DETECTING_NET_FORWARD_THRUST_DEFAULT, AP_NETCLEANING_DETECTING_NET_FORWARD_THRUST_DEFAULT);
+    _forward_out = constrain_float(_forward_out, -_detect_net_forw_trust, _detect_net_forw_trust);
 }
 
 void AP_NetCleaning::run_net_cleaning_attitude_control()
