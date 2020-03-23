@@ -47,6 +47,9 @@ public:
     // Run attitude controller to hold current attitude
     void keep_current_attitude();
 
+    // Set the roll and pitch angles of the target attitude to zero
+    void set_levelled_target_attitude();
+
     // Stores target attitude and duration for a rotational trajectory
     // if target angles are relative, they get added to the current attitude.
     void start_trajectory(Vector3f target_euler_angles_cd, uint32_t duration, bool relative);
