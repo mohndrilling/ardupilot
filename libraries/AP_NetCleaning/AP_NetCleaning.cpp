@@ -83,7 +83,6 @@ const AP_Param::GroupInfo AP_NetCleaning::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("END_DEPTH", 8, AP_NetCleaning, _finish_cleaning_altitude, AP_NETCLEANING_FINISH_CLEANING_DEPTH_DEFAULT),
 
-
     // @Param: CLIMB_RATE
     // @DisplayName: Climbing rate when changing altitudes in cm/s
     // @Description: Climbing rate when changing altitudes in cm/s
@@ -92,6 +91,24 @@ const AP_Param::GroupInfo AP_NetCleaning::var_info[] = {
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("CLIMB_RATE", 9, AP_NetCleaning, _climb_rate, AP_NETCLEANING_CLIMBING_RATE_CMS_DEFAULT),
+
+    // @Param: ROT_DUR
+    // @DisplayName: Duration of rotational trajectory when aligning to net
+    // @Description: Duration of rotational trajectory when aligning to net
+    // @Units: s
+    // @Range: 0.0 100.0
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("ROT_DUR", 10, AP_NetCleaning, _rot_traj_duration, AP_NETCLEANING_ROT_TRAJECTORY_DURATION_DEFAULT),
+
+    // @Param: THR_DUR
+    // @DisplayName: Duration of altitude trajectory when switching altitude levels
+    // @Description: Duration of altitude trajectory when switching altitude levels
+    // @Units: s
+    // @Range: 0.0 100.0
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("THR_DUR", 11, AP_NetCleaning, _alt_traj_duration, AP_NETCLEANING_ALT_TRAJECTORY_DURATION_DEFAULT),
 
     AP_GROUPEND
 };
@@ -320,7 +337,7 @@ void AP_NetCleaning::align_vertical()
         // relative rotation: 90 degrees about x axis, 90 degrees about z axis, ypr-sequence
         // values in centidegrees
         Vector3f target_euler_angles_cd = Vector3f(9000.0f, 0.0f, 9000.0f);
-        uint32_t duration_ms = 6000;
+        uint32_t duration_ms = static_cast<uint32_t>(_rot_traj_duration * 1000.0f);
         _attitude_control.start_trajectory(target_euler_angles_cd, duration_ms, true);
         _prev_state = _current_state;
     }
@@ -432,7 +449,7 @@ void AP_NetCleaning::throttle_downwards()
     {
         // start polynomial altitude trajectory moving the vehicle to a deeper lane
 
-        uint32_t duration_ms = 10000;
+        uint32_t duration_ms = static_cast<uint32_t>(_alt_traj_duration * 1000.0f);
         float cur_altitude = _inav.get_altitude();
 
         if (cur_altitude < _lane_width - _finish_cleaning_altitude)
@@ -500,7 +517,7 @@ void AP_NetCleaning::align_horizontal()
         // relative rotation: -90 degrees about x axis, -90 degrees about y axis, ypr-sequence, exact opponent trajectory of 'AligningToNet' state
         // values in centidegrees
         Vector3f target_euler_angles_cd = Vector3f(-9000.0f, -9000.0f, 0.0f);
-        uint32_t duration_ms = 6000;
+        uint32_t duration_ms = static_cast<uint32_t>(_rot_traj_duration * 1000.0f);
         _attitude_control.start_trajectory(target_euler_angles_cd, duration_ms, true);
         _prev_state = _current_state;
     }
