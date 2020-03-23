@@ -18,9 +18,9 @@
 #define AP_NETCLEANING_CLEANING_FORWARD_THRUST_DEFAULT 0.25f
 #define AP_NETCLEANING_DETECTING_NET_FORWARD_THRUST_DEFAULT 0.15f
 #define AP_NETCLEANING_LANE_WIDTH_DEFAULT 50.0f
-#define AP_NETCLEANING_START_CLEANING_DEPTH_DEFAULT 100
-#define AP_NETCLEANING_FINISH_CLEANING_DEPTH_DEFAULT 300
-#define AP_NETCLEANING_CLIMBING_RATE_CMS_DEFAULT 10
+#define AP_NETCLEANING_START_CLEANING_DEPTH_DEFAULT 100.0f
+#define AP_NETCLEANING_FINISH_CLEANING_DEPTH_DEFAULT 300.0f
+#define AP_NETCLEANING_CLIMBING_RATE_CMS_DEFAULT 10.0f
 
 #define AP_NETCLEANING_ADJUSTED_BY_OPERATOR_POST_DELAY 15000
 #define AP_NETCLEANING_APPROACHING_INIT_ALTITUDE_POST_DELAY 3000
@@ -50,7 +50,6 @@ public:
                     _stereo_vision(stereo_vision),
                     _current_state(State::Inactive),
                     _prev_state(State::Inactive),
-                    _dist_tolerance(AP_NETCLEANING_INITIAL_NET_DISTANCE_TOLERANCE_DEFAULT),
                     _loop_progress(-1)
     {
         AP_Param::setup_object_defaults(this, var_info);
@@ -218,8 +217,6 @@ protected:
 
     /////////////// state specific variables ////////////////
 
-    ///////// shared between states
-
     // true if the task of the current state is fulfilled
     bool _state_logic_finished;
 
@@ -229,13 +226,37 @@ protected:
     // the time stamp of when the task of the current state was fulfilled
     uint32_t _state_logic_finished_ms;
 
-    ///////// ApproachingNet
+    ////////////// Parameters ///////////////////////////////
 
     // target distance towards net (cm)
-    AP_Int16 _initial_net_distance;
+    AP_Float _init_net_dist;
 
-    // tolerance for target distance (m)
-    float _dist_tolerance;
+    // tolerance for target distance (cm)
+    AP_Float _init_net_dist_tolerance;
+
+    // Throttle thrust when approaching net
+    AP_Float _approach_thr_thrust;
+
+    // Throttle thrust when cleaning net
+    AP_Float _cleaning_thr_thrust;
+
+    // Forward thrust when cleaning net
+    AP_Float _cleaning_forw_thrust;
+
+    // Forward thrust when detecting net
+    AP_Float _detect_net_forw_trust;
+
+    // Lane width between two cleaning levels (cm)
+    AP_Float _lane_width;
+
+    // Altitude at which the net cleaning starts
+    AP_Float _start_cleaning_altitude;
+
+    // Altitude at which the net cleaning ends
+    AP_Float _finish_cleaning_altitude;
+
+    // Climbing rate when changing altitudes in cm/s
+    AP_Float _climb_rate;
 
 public:
 };
