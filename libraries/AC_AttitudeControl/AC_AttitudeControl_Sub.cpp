@@ -310,6 +310,14 @@ void AC_AttitudeControl_Sub::keep_current_attitude()
     input_euler_angle_roll_pitch_yaw(_target_roll_cd, _target_pitch_cd, _target_yaw_cd, true);
 }
 
+void AC_AttitudeControl_Sub::set_levelled_target_attitude()
+{
+    // set target angles resulting in horizontal attitude
+    _target_roll_cd = 0.0f;
+    _target_pitch_cd = 0.0f;
+    _target_yaw_cd = RadiansToCentiDegrees(_ahrs.get_current_yaw());
+}
+
 void AC_AttitudeControl_Sub::start_trajectory(Vector3f target_euler_angles_cd, uint32_t duration, bool relative)
 {
     // current vehicle attitude
@@ -445,7 +453,7 @@ void AC_AttitudeControl_Sub::update_throttle_rpy_mix()
     _throttle_rpy_mix = constrain_float(_throttle_rpy_mix, 0.1f, AC_ATTITUDE_CONTROL_MAX);
 }
 
-// set target euler angles to current euler angles - called at initialization of net tracking mode
+// set target euler angles to current euler angles
 void AC_AttitudeControl_Sub::reset_target_attitude()
 {
     // retrieve euler angles of current vehicle attitude
