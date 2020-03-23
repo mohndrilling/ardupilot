@@ -29,7 +29,7 @@ void AP_NetCleaning::init()
     _last_stereo_update_ms = _stereo_vision.get_last_stv_update_ms();
 
     // set initial state
-    _current_state = State::ApproachingInitialAltitude;
+    _current_state = State::AdjustedByOperator;
 
     // miscellaneous initial parameters
     _terminate = false;
@@ -46,6 +46,10 @@ void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle
 
     switch (_current_state)
     {
+        case State::AdjustedByOperator:
+            adjusted_by_operator();
+            break;
+
         case State::ApproachingInitialAltitude:
             approach_initial_altitude();
             break;
@@ -113,6 +117,30 @@ void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle
     _last_state_execution_ms = AP_HAL::millis();
 }
 
+void AP_NetCleaning::adjusted_by_operator()
+{
+    // run attitude controller to hold horizontal attitude
+    _attitude_control.keep_current_attitude();
+
+    // release yaw controller so operator can align the AUV's heading properly
+    _attitude_control.relax_yaw_control();
+
+    // no translational movement, vehicle can be moved by operator
+    _forward_out = 0.0f;
+    _lateral_out = 0.0f;
+    _throttle_out = 0.0f;
+
+    /////////////// State Transition ////////////////
+    // switch to next state after post delay. The post delay defines the time, during which the operator can adjust the vehicle's heading and position
+    if (!_state_logic_finished)
+    {
+        set_state_logic_finished();
+    }
+
+    if (_state_logic_finished)
+        switch_state_after_post_delay(State::ApproachingInitialAltitude, "ApproachingInitialAltitude", AP_NETCLEANING_ADJUSTED_BY_OPERATOR_POST_DELAY);
+}
+
 void AP_NetCleaning::approach_initial_altitude()
 {
     // entry action
@@ -120,9 +148,6 @@ void AP_NetCleaning::approach_initial_altitude()
     {
         // set horizontal target attitude
         _attitude_control.set_levelled_target_attitude();
-
-        // initially set last state execution here
-        _last_state_execution_ms = AP_HAL::millis();
 
         _prev_state = _current_state;
     }

@@ -22,6 +22,7 @@
 #define AP_NETCLEANING_FINISH_CLEANING_DEPTH_DEFAULT 300
 #define AP_NETCLEANING_CLIMBING_RATE_CMS_DEFAULT 10
 
+#define AP_NETCLEANING_ADJUSTED_BY_OPERATOR_POST_DELAY 15000
 #define AP_NETCLEANING_APPROACHING_INIT_ALTITUDE_POST_DELAY 3000
 #define AP_NETCLEANING_HOLDING_NET_DISTANCE_POST_DELAY 6000
 #define AP_NETCLEANING_ALIGNING_VERTICAL_POST_DELAY 4000
@@ -83,6 +84,7 @@ protected:
     enum State
     {
       Inactive,
+      AdjustedByOperator,
       ApproachingInitialAltitude,
       DetectingNetInitially,
       HoldingNetDistance,
@@ -100,6 +102,8 @@ protected:
     };
 
     //////////////////////// State Logic Functions ////////////////////////////////////////////
+    // adjusted_by_operator: Wait for adjustment by operator
+    void adjusted_by_operator();
 
     // approach_initial_altitude: Move to initial altitude where net cleaning is about to start
     void approach_initial_altitude();
