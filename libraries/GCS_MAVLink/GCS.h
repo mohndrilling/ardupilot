@@ -232,7 +232,6 @@ public:
     void send_sys_status();
     void send_set_position_target_global_int(uint8_t target_system, uint8_t target_component, const Location& loc);
     void send_rpm() const;
-    virtual void send_nettracking_state();
 
     // return a bitmap of active channels. Used by libraries to loop
     // over active channels to send to all active channels    

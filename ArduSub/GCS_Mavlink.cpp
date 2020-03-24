@@ -299,6 +299,11 @@ bool GCS_MAVLINK_Sub::try_send_message(enum ap_message id)
 #endif
         break;
 
+    case MSG_NETTRACKING_STATE:
+        CHECK_PAYLOAD_SIZE(NETTRACKING_STATE);
+        send_nettracking_state();
+        break;
+
     default:
         return GCS_MAVLINK::try_send_message(id);
     }

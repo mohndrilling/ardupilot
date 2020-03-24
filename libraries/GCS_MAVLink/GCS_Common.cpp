@@ -1894,11 +1894,6 @@ void GCS_MAVLINK::send_ahrs()
         ahrs.get_error_yaw());
 }
 
-void GCS_MAVLINK::send_nettracking_state()
-{
-    // overwritten in vehicle code
-}
-
 /*
     send a statustext text string to specific MAVLink bitmask
 */
@@ -4328,11 +4323,6 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
     case MSG_VFR_HUD:
         CHECK_PAYLOAD_SIZE(VFR_HUD);
         send_vfr_hud();
-        break;
-
-    case MSG_NETTRACKING_STATE:
-        CHECK_PAYLOAD_SIZE(NETTRACKING_STATE);
-        send_nettracking_state();
         break;
 
     case MSG_VIBRATION:
