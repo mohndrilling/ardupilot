@@ -454,13 +454,19 @@ void AP_NetCleaning::throttle_downwards()
 
         if (cur_altitude < _lane_width - _finish_cleaning_altitude)
         {
+            // set absolute altitude target to finish_cleaning_depth
             _pos_control.start_altitude_trajectory(static_cast<float>(-_finish_cleaning_altitude), duration_ms, false);
-            _terminate = true;
         }
         else
         {
+            // move to the next deeper lane
             _pos_control.start_altitude_trajectory(static_cast<float>(-_lane_width), duration_ms, true);
         }
+
+        // if the lane after the next one is smaller than 20 % of the default lane width, terminate after next cleaning loop already
+        if (cur_altitude < 1.2 * _lane_width - _finish_cleaning_altitude)
+            _terminate = true;
+
         _prev_state = _current_state;
     }
 
