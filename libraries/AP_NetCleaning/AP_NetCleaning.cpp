@@ -110,6 +110,13 @@ const AP_Param::GroupInfo AP_NetCleaning::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("THR_DUR", 11, AP_NetCleaning, _alt_traj_duration, AP_NETCLEANING_ALT_TRAJECTORY_DURATION_DEFAULT),
 
+    // @Param: CLEAN_CW
+    // @DisplayName: Whether to clean in clockwise or counterclockwise direction
+    // @Description: Whether to clean in clockwise or counterclockwise direction
+    // @Values: 0:Disabled, 1:Enabled
+    // @User: Standard
+    AP_GROUPINFO("CLEAN_CW", 12, AP_NetCleaning, _clean_clockwise, AP_NETCLEANING_CLEANING_CLOCKWISE_DEFAULT),
+
     AP_GROUPEND
 };
 
@@ -222,7 +229,16 @@ void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle
 }
 
 void AP_NetCleaning::adjusted_by_operator()
-{
+{    
+    // entry action
+    if (_prev_state != _current_state)
+    {
+        // set horizontal target attitude
+        _attitude_control.set_levelled_target_attitude();
+
+        _prev_state = _current_state;
+    }
+
     // run attitude controller to hold horizontal attitude
     _attitude_control.keep_current_attitude();
 
@@ -247,15 +263,6 @@ void AP_NetCleaning::adjusted_by_operator()
 
 void AP_NetCleaning::approach_initial_altitude()
 {
-    // entry action
-    if (_prev_state != _current_state)
-    {
-        // set horizontal target attitude
-        _attitude_control.set_levelled_target_attitude();
-
-        _prev_state = _current_state;
-    }
-
     // run attitude controller to hold horizontal attitude
     _attitude_control.keep_current_attitude();
 
@@ -346,6 +353,9 @@ void AP_NetCleaning::align_vertical()
         // relative rotation: 90 degrees about x axis, 90 degrees about z axis, ypr-sequence
         // values in centidegrees
         Vector3f target_euler_angles_cd = Vector3f(9000.0f, 0.0f, 9000.0f);
+        if (_clean_clockwise != AP_NETCLEANING_CLEAN_CLOCKWISE)
+            target_euler_angles_cd *= -1.0f;
+
         uint32_t duration_ms = static_cast<uint32_t>(_rot_traj_duration * 1000.0f);
         _attitude_control.start_trajectory(target_euler_angles_cd, duration_ms, true);
         _prev_state = _current_state;
@@ -581,7 +591,9 @@ void AP_NetCleaning::align_horizontal()
     {
         // relative rotation: -90 degrees about x axis, -90 degrees about y axis, ypr-sequence, exact opponent trajectory of 'AligningToNet' state
         // values in centidegrees
-        Vector3f target_euler_angles_cd = Vector3f(-9000.0f, -9000.0f, 0.0f);
+        Vector3f target_euler_angles_cd = Vector3f(-9000.0f, 0.0f, -9000.0f);
+        if (_clean_clockwise != AP_NETCLEANING_CLEAN_CLOCKWISE)
+            target_euler_angles_cd *= -1.0f;
         uint32_t duration_ms = static_cast<uint32_t>(_rot_traj_duration * 1000.0f);
         _attitude_control.start_trajectory(target_euler_angles_cd, duration_ms, true);
         _prev_state = _current_state;

@@ -23,6 +23,8 @@
 #define AP_NETCLEANING_CLIMBING_RATE_CMS_DEFAULT 10.0f
 #define AP_NETCLEANING_ROT_TRAJECTORY_DURATION_DEFAULT 10.0f
 #define AP_NETCLEANING_ALT_TRAJECTORY_DURATION_DEFAULT 10.0f
+#define AP_NETCLEANING_CLEANING_CLOCKWISE_DEFAULT 1
+#define AP_NETCLEANING_CLEAN_CLOCKWISE 1
 
 #define AP_NETCLEANING_ADJUSTED_BY_OPERATOR_POST_DELAY 10000
 #define AP_NETCLEANING_APPROACHING_INIT_ALTITUDE_POST_DELAY 2000
@@ -280,6 +282,9 @@ protected:
 
     // Duration of altitude trajectory when aligning to net in s
     AP_Float _alt_traj_duration;
+
+    // 1: cleaning clockwise, 0: cleaning counterclockwise
+    AP_Int8 _clean_clockwise;
 
 public:
 };
