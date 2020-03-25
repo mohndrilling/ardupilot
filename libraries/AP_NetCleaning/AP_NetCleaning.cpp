@@ -128,6 +128,7 @@ void AP_NetCleaning::init()
 
     // miscellaneous initial parameters
     _terminate = false;
+    _brush_motors_active = false;
     _state_logic_finished = false;
     _last_state_execution_ms = 0;
     _state_logic_finished_ms = 0;
@@ -161,6 +162,10 @@ void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle
             align_vertical();
             break;
 
+        case State::StartingBrushMotors:
+            start_brush_motors();
+            break;
+
         case State::ApproachingNet:
             approach_net();
             break;
@@ -179,6 +184,10 @@ void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle
 
         case State::DetachingFromNet:
             detach_from_net();
+            break;
+
+        case State::StoppingBrushMotors:
+            stop_brush_motors();
             break;
 
         case State::AligningHorizontal:
@@ -357,7 +366,32 @@ void AP_NetCleaning::align_vertical()
     }
 
     if (_state_logic_finished)
-        switch_state_after_post_delay(State::ApproachingNet, "ApproachingNet", AP_NETCLEANING_ALIGNING_VERTICAL_POST_DELAY);
+        switch_state_after_post_delay(State::StartingBrushMotors, "StartingBrushMotors", AP_NETCLEANING_ALIGNING_VERTICAL_POST_DELAY);
+}
+
+void AP_NetCleaning::start_brush_motors()
+{
+    // run attitude controller to hold horizontal attitude
+    _attitude_control.keep_current_attitude();
+
+    // no translational movement
+    _forward_out = 0.0f;
+    _lateral_out = 0.0f;
+    _throttle_out = 0.0f;
+
+    // Todo: Start the motors. If the motors are supposed to be started and stopped by the companion computer
+    // the state information about the net cleaning states can be used to trigger (see ArduSub/GCS_Mavlink.cpp - send_netcleaning_state)
+    _brush_motors_active = true;
+
+    /////////////// State Transition ////////////////
+    // switch to next state after post delay
+    if (!_state_logic_finished)
+    {
+        set_state_logic_finished();
+    }
+
+    if (_state_logic_finished)
+        switch_state_after_post_delay(State::ApproachingNet, "ApproachingNet", AP_NETCLEANING_STARTING_BRUSH_MOTORS_POST_DELAY);
 }
 
 void AP_NetCleaning::approach_net()
@@ -512,7 +546,32 @@ void AP_NetCleaning::detach_from_net()
     // the post delay/ throttle should be chosen such that the AUV can move sufficiently far away from the net
     // in order to have enough space to rotate back into horizontal orientation
     if (_state_logic_finished)
-        switch_state_after_post_delay(State::AligningHorizontal, "AligningHorizontal", AP_NETCLEANING_DETACHING_FROM_NET_POST_DELAY);
+        switch_state_after_post_delay(State::StoppingBrushMotors, "StoppingBrushMotors", AP_NETCLEANING_DETACHING_FROM_NET_POST_DELAY);
+}
+
+void AP_NetCleaning::stop_brush_motors()
+{
+    // run attitude controller to hold horizontal attitude
+    _attitude_control.keep_current_attitude();
+
+    // no translational movement
+    _forward_out = 0.0f;
+    _lateral_out = 0.0f;
+    _throttle_out = 0.0f;
+
+    // Todo: Stop the motors. If the motors are supposed to be started and stopped by the companion computer
+    // the state information about the net cleaning states can be used to trigger (see ArduSub/GCS_Mavlink.cpp - send_netcleaning_state)
+    _brush_motors_active = false;
+
+    /////////////// State Transition ////////////////
+    // switch to next state after post delay.
+    if (!_state_logic_finished)
+    {
+        set_state_logic_finished();
+    }
+
+    if (_state_logic_finished)
+        switch_state_after_post_delay(State::AligningHorizontal, "AligningHorizontal", AP_NETCLEANING_STOPPING_BRUSH_MOTORS_POST_DELAY);
 }
 
 void AP_NetCleaning::align_horizontal()
@@ -690,7 +749,7 @@ void AP_NetCleaning::switch_state(State target_state, const char *state_name)
     _prev_state = _current_state;
     _current_state = target_state;
     _state_logic_finished = false;
-    gcs().send_text(MAV_SEVERITY_INFO, "NetCleaning: Switching to state '%s'", state_name);
+    gcs().send_text(MAV_SEVERITY_INFO, "[NetCleaning] Switch state: '%s'", state_name);
 }
 
 void AP_NetCleaning::switch_state_after_post_delay(State target_state, const char *state_name, uint32_t post_delay)

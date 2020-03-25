@@ -812,6 +812,7 @@ ap_message GCS_MAVLINK::mavlink_id_to_ap_message_id(const uint32_t mavlink_id) c
         { MAVLINK_MSG_ID_GENERATOR_STATUS,      MSG_GENERATOR_STATUS},
         { MAVLINK_MSG_ID_WINCH_STATUS,          MSG_WINCH_STATUS},
         { MAVLINK_MSG_ID_NETTRACKING_STATE,     MSG_NETTRACKING_STATE},
+        { MAVLINK_MSG_ID_NETCLEANING_STATE,     MSG_NETCLEANING_STATE},
             };
 
     for (uint8_t i=0; i<ARRAY_SIZE(map); i++) {
