@@ -321,11 +321,11 @@ void AC_AttitudeControl_Sub::set_levelled_target_attitude()
 void AC_AttitudeControl_Sub::start_trajectory(Vector3f target_euler_angles_cd, uint32_t duration, bool relative)
 {
     // current vehicle attitude
-    float current_roll, current_pitch, current_yaw;
-
     Quaternion vehicle_attitude;
     _ahrs.get_quat_body_to_ned(vehicle_attitude);
-    vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
+
+    // the relative attitude difference during the trajectory
+    Quaternion relative_attitude;
 
     if (relative)
     {
@@ -337,26 +337,31 @@ void AC_AttitudeControl_Sub::start_trajectory(Vector3f target_euler_angles_cd, u
         float relative_yaw = radians(target_euler_angles_cd[2] * 0.01f);
 
         // relative attitude (yaw-pitch-roll-sequence about consecutively rotated axes)
-        Quaternion relative_attitude;
         relative_attitude.from_euler(relative_roll, relative_pitch, relative_yaw);
-
-        // absolute target attitude (rotations applied from right to left in quaternion multiplication)
-        // so the relative rotation can be seen a ypr-rotation about the axes of the body frame
-        Quaternion target_attitude = vehicle_attitude * relative_attitude;
-
-        // target euler angles as ypr sequence
-        float target_roll, target_pitch, target_yaw;
-        target_attitude.to_euler(target_roll, target_pitch, target_yaw);
-
-        _trajectory_target_angles_cd = Vector3f(RadiansToCentiDegrees(target_roll), RadiansToCentiDegrees(target_pitch), RadiansToCentiDegrees(target_yaw));
     }
     else
     {
-        _trajectory_target_angles_cd = target_euler_angles_cd;
+        // This scope (absolute rotational trajectories) is not tested yet
+
+        // absolute target angles of trajectory
+        float target_roll = radians(target_euler_angles_cd[0] * 0.01f);
+        float target_pitch = radians(target_euler_angles_cd[1] * 0.01f);
+        float target_yaw = radians(target_euler_angles_cd[2] * 0.01f);
+
+        // absolute target attitude
+        Quaternion absolute_target_attitude;
+        absolute_target_attitude.from_euler(target_roll, target_pitch, target_yaw);
+
+        // difference attitude
+        relative_attitude = absolute_target_attitude * vehicle_attitude.inverse();
     }
 
-    // store start and target attitude of trajectory in centi degrees
-    _trajectory_start_angles_cd = Vector3f(RadiansToCentiDegrees(current_roll), RadiansToCentiDegrees(current_pitch), RadiansToCentiDegrees(current_yaw));
+    // interprete the relative attitude change of the trajectory as a rotation about a single axis with a specific angle
+    // the length of the resulting vector is equal to the angle of the rotation about this vector
+    relative_attitude.to_axis_angle(_trajectory_axis_angle);
+
+    // store current attitude as starting attitude of the trajectory
+    _trajectory_start_attitude = vehicle_attitude;
 
     // store duration
     _trajectory_duration_ms = duration;
@@ -372,14 +377,46 @@ bool AC_AttitudeControl_Sub::update_trajectory()
 
     if (t <= _trajectory_duration_ms)
     {
-        // get euler angles from 5th order polynomial trajectory (defined in AP_Math/polynomial5.h)
-        Vector3f cur_euler_angles_cd;
-        polynomial_trajectory_3d(cur_euler_angles_cd, _trajectory_start_angles_cd, _trajectory_target_angles_cd, _trajectory_duration_ms, t);
+        // get axis angle from 5th order polynomial trajectory (defined in AP_Math/polynomial5.h)
+        // the angle of the trajectory starts with zero and reaches it's target value along polynomial trajectory
+        // the polynomial trajectories coefficients are chosen in a way, that the angular velocity of the vehicle at the
+        // start and finish of the trajectory is zero, resulting in smooth acceleration and deceleration
+        float current_angle;
+        float start_angle = 0.0f;
+        // the convention here is that the target angle of the rotation is stored as the length of the rotation axis
+        float target_angle = _trajectory_axis_angle.length();
+        polynomial_trajectory(current_angle, start_angle, target_angle, _trajectory_duration_ms, t);
+
+        // calculate current target attitude
+        Quaternion cur_target_attitude;
+
+        if (!is_zero(_trajectory_axis_angle.length()))
+        {
+            // scale the rotation axis by the current rotation angle from the polynomial trajectory
+            Vector3f cur_axis_angle = _trajectory_axis_angle / _trajectory_axis_angle.length() * current_angle;
+
+            // retrieve the relative attitude
+            Quaternion cur_rel_attitude;
+            cur_rel_attitude.from_axis_angle(cur_axis_angle);
+
+            // retrieve the current absolute target attitude (rotations applied from right to left in quaternion multiplication)
+            // so the relative rotation is basically added to the vehicles starting attitude
+            cur_target_attitude = _trajectory_start_attitude * cur_rel_attitude;
+        }
+        else
+        {
+            // relative rotation is zero, set target to start altitude
+            cur_target_attitude = _trajectory_start_attitude;
+        }
+
+        // convert current target attitude to euler angles
+        float target_roll, target_pitch, target_yaw;
+        cur_target_attitude.to_euler(target_roll, target_pitch, target_yaw);
 
         // update the target angles for attitude controller
-        _target_roll_cd = cur_euler_angles_cd[0];
-        _target_pitch_cd = cur_euler_angles_cd[1];
-        _target_yaw_cd = cur_euler_angles_cd[2];
+        _target_roll_cd = RadiansToCentiDegrees(target_roll);
+        _target_pitch_cd = RadiansToCentiDegrees(target_pitch);
+        _target_yaw_cd = RadiansToCentiDegrees(target_yaw);
 
         // perform attitude control
         input_euler_angle_roll_pitch_yaw(_target_roll_cd, _target_pitch_cd, _target_yaw_cd, true);
