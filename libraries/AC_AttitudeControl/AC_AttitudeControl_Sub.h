@@ -125,8 +125,8 @@ protected:
     float _target_yaw_cd;
 
     // start and target angles of rotational trajectory
-    Vector3f _trajectory_start_angles_cd;
-    Vector3f _trajectory_target_angles_cd;
+    Quaternion _trajectory_start_attitude;
+    Vector3f _trajectory_axis_angle;
 
     // duration of rotational trajectory
     uint32_t _trajectory_duration_ms;
