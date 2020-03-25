@@ -960,6 +960,7 @@ ap_message GCS_MAVLINK::mavlink_id_to_ap_message_id(const uint32_t mavlink_id) c
         { MAVLINK_MSG_ID_DEEPSTALL,             MSG_LANDING},
         { MAVLINK_MSG_ID_EXTENDED_SYS_STATE,    MSG_EXTENDED_SYS_STATE},
         { MAVLINK_MSG_ID_NETTRACKING_STATE,     MSG_NETTRACKING_STATE},
+        { MAVLINK_MSG_ID_NETCLEANING_STATE,     MSG_NETCLEANING_STATE},
         };
 
     for (uint8_t i=0; i<ARRAY_SIZE(map); i++) {

@@ -24,15 +24,17 @@
 #define AP_NETCLEANING_ROT_TRAJECTORY_DURATION_DEFAULT 10.0f
 #define AP_NETCLEANING_ALT_TRAJECTORY_DURATION_DEFAULT 10.0f
 
-#define AP_NETCLEANING_ADJUSTED_BY_OPERATOR_POST_DELAY 15000
-#define AP_NETCLEANING_APPROACHING_INIT_ALTITUDE_POST_DELAY 3000
-#define AP_NETCLEANING_HOLDING_NET_DISTANCE_POST_DELAY 6000
-#define AP_NETCLEANING_ALIGNING_VERTICAL_POST_DELAY 4000
+#define AP_NETCLEANING_ADJUSTED_BY_OPERATOR_POST_DELAY 10000
+#define AP_NETCLEANING_APPROACHING_INIT_ALTITUDE_POST_DELAY 2000
+#define AP_NETCLEANING_HOLDING_NET_DISTANCE_POST_DELAY 5000
+#define AP_NETCLEANING_ALIGNING_VERTICAL_POST_DELAY 3000
+#define AP_NETCLEANING_STARTING_BRUSH_MOTORS_POST_DELAY 2000
 #define AP_NETCLEANING_APPROACHING_NET_POST_DELAY 7000
 #define AP_NETCLEANING_ATTACHING_BRUSHES_POST_DELAY 3000
 #define AP_NETCLEANING_CLEANING_NET_POST_DELAY 1500
 #define AP_NETCLEANING_THROTTLE_DOWNWARDS_POST_DELAY 4000
 #define AP_NETCLEANING_DETACHING_FROM_NET_POST_DELAY 5000
+#define AP_NETCLEANING_STOPPING_BRUSH_MOTORS_POST_DELAY 2000
 #define AP_NETCLEANING_ALIGNING_HORIZONTAL_POST_DELAY 4000
 
 
@@ -78,6 +80,9 @@ public:
     // get net cleaning state to be sent via mavlink
     uint8_t get_state() { return _current_state; }
 
+    // whether the current state requires activated brush motors
+    bool brush_motors_active() { return _brush_motors_active; }
+
     // resets internal variables to default values
     void reset();
 
@@ -96,6 +101,7 @@ protected:
       CleaningNet,
       ThrottleDownwards,
       DetachingFromNet,
+      StoppingBrushMotors,
       AligningHorizontal,
       DetectingNetTerminally,
       Surfacing,
@@ -118,6 +124,9 @@ protected:
     // align_vertical: perform rotational trajectory such that brushes face the net
     void align_vertical();
 
+    // start_brush_motors: no movement, starting the brush motors
+    void start_brush_motors();
+
     // approach_net: throttles along vehicles z-axis until auv touch the net.
     void approach_net();
 
@@ -132,6 +141,9 @@ protected:
 
     // detach_from_net: stabilize attitude and move AUV away from net
     void detach_from_net();
+
+    // stop_brush_motors: no movement, stopping the brush motors
+    void stop_brush_motors();
 
     // align_horizontal: perform rotational trajectory back to horizontl orientation
     void align_horizontal();
@@ -211,6 +223,9 @@ protected:
 
     // 360 degrees loop progress in percent
     float _loop_progress;
+
+    // whether the current state requires activated brush motors
+    bool _brush_motors_active;
 
     // sensor information
     SensorIntervals _sensor_intervals;

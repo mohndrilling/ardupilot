@@ -169,6 +169,17 @@ void GCS_MAVLINK_Sub::send_nettracking_state()
     mavlink_msg_nettracking_state_send(chan, nettr_state, loop_progress);
 }
 
+void GCS_MAVLINK_Sub::send_netcleaning_state()
+{
+    if (sub.control_mode == MD_NET_CLEANING)
+    {
+        uint8_t netcl_state = sub.nettracking.get_state();
+        uint8_t _brush_motors_active = sub.netcleaning.brush_motors_active() ? 1 : 0;
+
+        mavlink_msg_netcleaning_state_send(chan, netcl_state, _brush_motors_active);
+    }
+}
+
 bool GCS_MAVLINK_Sub::send_info()
 {
     // Just do this all at once, hopefully the hard-wire telemetry requirement means this is ok
@@ -304,6 +315,11 @@ bool GCS_MAVLINK_Sub::try_send_message(enum ap_message id)
         send_nettracking_state();
         break;
 
+    case MSG_NETCLEANING_STATE:
+        CHECK_PAYLOAD_SIZE(NETCLEANING_STATE);
+        send_netcleaning_state();
+        break;
+
     default:
         return GCS_MAVLINK::try_send_message(id);
     }
@@ -408,6 +424,7 @@ static const ap_message STREAM_EXTENDED_STATUS_msgs[] = {
     MSG_NAV_CONTROLLER_OUTPUT,
     MSG_FENCE_STATUS,
     MSG_NETTRACKING_STATE,
+    MSG_NETCLEANING_STATE,
     MSG_NAMED_FLOAT
 };
 static const ap_message STREAM_POSITION_msgs[] = {
