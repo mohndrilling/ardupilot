@@ -273,6 +273,10 @@ void AC_AttitudeControl_Sub::keep_nose_horizontal()
     // the body-frame x-axis expressed with regard to the inertial frame
     Vector3f x_B = veh_att_rot_matrix * Vector3f(1.0f, 0.0f, 0.0f);
 
+    // if the body-frame x-axis and the desired x-axis point in opposite directions, negate the desired x-axis
+    if (x_d * x_B < 0.0f)
+        x_d *= -1.0f;
+
     // x_B is supposed to be rotated until it reaches the desired (horizontal) orientation x_d
     // the rotation axis is perpendicular to both vectors, thus expressed by the cross product
     Vector3f rot_axis = x_B % x_d;
