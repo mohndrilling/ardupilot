@@ -132,6 +132,8 @@ void AP_NetCleaning::init()
 
     // set initial state
     _current_state = State::AdjustedByOperator;
+    _prev_state = State::Inactive;
+    _first_run = true;
 
     // miscellaneous initial parameters
     _terminate = false;
@@ -146,7 +148,14 @@ void AP_NetCleaning::init()
 void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle_out)
 {
 
+    // set _first_run flag, checked by state logics to perform entry action
+    if (_prev_state != _current_state)
+    {
+        _first_run = true;
+        _prev_state = _current_state;
+    }
 
+    // run state logic
     switch (_current_state)
     {
         case State::AdjustedByOperator:
@@ -226,17 +235,18 @@ void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle
 
     // store time stamp of this loop
     _last_state_execution_ms = AP_HAL::millis();
+
+    // reset first_run flag
+    _first_run = false;
 }
 
 void AP_NetCleaning::adjusted_by_operator()
 {    
     // entry action
-    if (_prev_state != _current_state)
+    if (_first_run)
     {
         // set horizontal target attitude
         _attitude_control.set_levelled_target_attitude();
-
-        _prev_state = _current_state;
     }
 
     // run attitude controller to hold horizontal attitude
@@ -308,12 +318,10 @@ void AP_NetCleaning::detect_net_initially()
 void AP_NetCleaning::hold_net_distance()
 {
     // entry action
-    if (_prev_state != _current_state)
+    if (_first_run)
     {
         // store the home altitude at the very start of net cleaning
         _home_altitude = _inav.get_altitude();
-
-        _prev_state = _current_state;
     }
 
     // hold perpendicular heading with regard to the net and hold _init_net_dist towards net
@@ -348,7 +356,7 @@ void AP_NetCleaning::hold_net_distance()
 void AP_NetCleaning::align_vertical()
 {
     // entry action
-    if (_prev_state != _current_state)
+    if (_first_run)
     {
         // relative rotation: 90 degrees about x axis, 90 degrees about z axis, ypr-sequence
         // values in centidegrees
@@ -358,7 +366,6 @@ void AP_NetCleaning::align_vertical()
 
         uint32_t duration_ms = static_cast<uint32_t>(_rot_traj_duration * 1000.0f);
         _attitude_control.start_trajectory(target_euler_angles_cd, duration_ms, true);
-        _prev_state = _current_state;
     }
 
     // perform rotational trajectory, update_trajectory returns true if trajectory has finished
@@ -453,11 +460,10 @@ void AP_NetCleaning::attach_brushes()
 void AP_NetCleaning::clean_net()
 {
     // entry action
-    if (_prev_state != _current_state)
+    if (_first_run)
     {
         // store initial yaw angle
         _initial_yaw = _attitude_control.get_accumulated_yaw();
-        _prev_state = _current_state;
     }
 
     // run net cleaning attitude control
@@ -489,7 +495,7 @@ void AP_NetCleaning::clean_net()
 void AP_NetCleaning::throttle_downwards()
 {
     // entry action
-    if (_prev_state != _current_state)
+    if (_first_run)
     {
         // start polynomial altitude trajectory moving the vehicle to a deeper lane
 
@@ -510,8 +516,6 @@ void AP_NetCleaning::throttle_downwards()
         // if the lane after the next one is smaller than 20 % of the default lane width, terminate after next cleaning loop already
         if (cur_altitude < 1.2 * _lane_width - _finish_cleaning_altitude)
             _terminate = true;
-
-        _prev_state = _current_state;
     }
 
     // follow depth trajectory, update_trajectory returns true if trajectory has finished
@@ -587,7 +591,7 @@ void AP_NetCleaning::stop_brush_motors()
 void AP_NetCleaning::align_horizontal()
 {
     // entry action
-    if (_prev_state != _current_state)
+    if (_first_run)
     {
         // relative rotation: -90 degrees about x axis, -90 degrees about y axis, ypr-sequence, exact opponent trajectory of 'AligningToNet' state
         // values in centidegrees
@@ -596,7 +600,6 @@ void AP_NetCleaning::align_horizontal()
             target_euler_angles_cd *= -1.0f;
         uint32_t duration_ms = static_cast<uint32_t>(_rot_traj_duration * 1000.0f);
         _attitude_control.start_trajectory(target_euler_angles_cd, duration_ms, true);
-        _prev_state = _current_state;
     }
 
     // perform rotational trajectory, update_trajectory returns true if trajectory has finished
@@ -758,7 +761,6 @@ void AP_NetCleaning::run_net_cleaning_attitude_control()
 
 void AP_NetCleaning::switch_state(State target_state, const char *state_name)
 {
-    _prev_state = _current_state;
     _current_state = target_state;
     _state_logic_finished = false;
     gcs().send_text(MAV_SEVERITY_INFO, "[NetCleaning] Switch state: '%s'", state_name);

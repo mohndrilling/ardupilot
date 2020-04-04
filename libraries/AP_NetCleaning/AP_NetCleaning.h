@@ -223,6 +223,9 @@ protected:
     // previous net cleaning State
     State _prev_state;
 
+    // flag is true, when the current state is running for the first time
+    bool _first_run;
+
     // 360 degrees loop progress in percent
     float _loop_progress;
 
@@ -286,5 +289,4 @@ protected:
     // 1: cleaning clockwise, 0: cleaning counterclockwise
     AP_Int8 _clean_clockwise;
 
-public:
 };
