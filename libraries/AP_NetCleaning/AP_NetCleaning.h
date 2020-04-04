@@ -169,6 +169,14 @@ protected:
     // run_net_cleaning_attitude_control: keep nose horizontal and relax roll and pitch controller
     void run_net_cleaning_attitude_control();
 
+    // set_translational_thrust: sets the values for forward, lateral and throttle output
+    void set_translational_thrust(float forward, float lateral, float throttle)
+    {
+        _forward_out = forward;
+        _lateral_out = lateral;
+        _throttle_out = throttle;
+    }
+
     // switch_state: switch the state of the state machine
     void switch_state(State target_state, const char *state_name);
 

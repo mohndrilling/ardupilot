@@ -255,10 +255,8 @@ void AP_NetCleaning::adjusted_by_operator()
     // release yaw controller so operator can align the AUV's heading properly
     _attitude_control.relax_yaw_control();
 
-    // no translational movement, vehicle can be moved by operator
-    _forward_out = 0.0f;
-    _lateral_out = 0.0f;
-    _throttle_out = 0.0f;
+    // no translational movement (forward, lateral, throttle)
+    set_translational_thrust(0.0f, 0.0f, 0.0f);
 
     /////////////// State Transition ////////////////
     // switch to next state after post delay. The post delay defines the time, during which the operator can adjust the vehicle's heading and position
@@ -276,11 +274,9 @@ void AP_NetCleaning::approach_initial_altitude()
     // run attitude controller to hold horizontal attitude
     _attitude_control.keep_current_attitude();
 
-    // no lateral movement, (todo: use optical flow stabilization)
-    _lateral_out = 0.0f;
-
-    // no throttle
-    _throttle_out = 0.0f;
+    // translational movement  (forward, lateral, throttle)
+    // todo: use optical flow stabilization for lateral velocity
+    set_translational_thrust(0.0f, 0.0f, 0.0f);
 
     // whether the starting altitude for net cleaning is reached
     bool target_alt_reached;
@@ -324,14 +320,12 @@ void AP_NetCleaning::hold_net_distance()
         _home_altitude = _inav.get_altitude();
     }
 
+    // translational movement (forward, lateral, throttle) (forward_out is overwritten by hold_heading_and_distance)
+    // todo: use optical flow stabilization for lateral velocity
+    set_translational_thrust(0.0f, 0.0f, 0.0f);
+
     // hold perpendicular heading with regard to the net and hold _init_net_dist towards net
     hold_heading_and_distance(_init_net_dist);
-
-    // no lateral movement, (todo: use optical flow stabilization)
-    _lateral_out = 0.0f;
-
-    // no throttle
-    _throttle_out = 0.0f;
 
     /////////////// State Transition ////////////////
     if (_stereo_vision.stereo_vision_healthy())
@@ -372,9 +366,7 @@ void AP_NetCleaning::align_vertical()
     bool trajectory_finished = _attitude_control.update_trajectory();
 
     // no translational movement
-    _forward_out = 0.0f;
-    _lateral_out = 0.0f;
-    _throttle_out = 0.0f;
+    set_translational_thrust(0.0f, 0.0f, 0.0f);
 
     /////////////// State Transition ////////////////
     if (!_state_logic_finished && trajectory_finished)
@@ -391,10 +383,8 @@ void AP_NetCleaning::start_brush_motors()
     // run attitude controller to hold horizontal attitude
     _attitude_control.keep_current_attitude();
 
-    // no translational movement
-    _forward_out = 0.0f;
-    _lateral_out = 0.0f;
-    _throttle_out = 0.0f;
+    // no translational movement  (forward, lateral, throttle)
+    set_translational_thrust(0.0f, 0.0f, 0.0f);
 
     // Todo: Start the motors. If the motors are supposed to be started and stopped by the companion computer
     // the state information about the net cleaning states can be used to trigger (see ArduSub/GCS_Mavlink.cpp - send_netcleaning_state)
@@ -416,10 +406,8 @@ void AP_NetCleaning::approach_net()
     // run attitude controller, keep current attitude
     _attitude_control.keep_current_attitude();
 
-    // translational movement
-    _forward_out = 0.0f;
-    _lateral_out = 0.0f;
-    _throttle_out = -_approach_thr_thrust;
+    // translational movement  (forward, lateral, throttle)
+    set_translational_thrust(0.0f, 0.0f, -_approach_thr_thrust);
 
     /////////////// State Transition ////////////////
     // directly set state logic to finished and go into post delay
@@ -439,10 +427,8 @@ void AP_NetCleaning::attach_brushes()
     // run net cleaning attitude control
     run_net_cleaning_attitude_control();
 
-    // translational movement
-    _forward_out = 0.0f;
-    _lateral_out = 0.0f;
-    _throttle_out = -_cleaning_thr_thrust;
+    // translational movement  (forward, lateral, throttle)
+    set_translational_thrust(0.0f, 0.0f, -_cleaning_thr_thrust);
 
     /////////////// State Transition ////////////////
     // directly set state logic to finished and go into post delay
@@ -469,10 +455,8 @@ void AP_NetCleaning::clean_net()
     // run net cleaning attitude control
     run_net_cleaning_attitude_control();
 
-    // translational movement
-    _forward_out = _cleaning_forw_thrust;
-    _lateral_out = 0.0f;
-    _throttle_out = -_cleaning_thr_thrust;
+    // translational movement  (forward, lateral, throttle)
+    set_translational_thrust(_cleaning_forw_thrust, 0.0f, -_cleaning_thr_thrust);
 
     /////////////// State Transition ////////////////
     // finish state after performing 360 degree loop
@@ -524,10 +508,8 @@ void AP_NetCleaning::throttle_downwards()
     // run net cleaning attitude control
     run_net_cleaning_attitude_control();
 
-    // translational movement
-    _forward_out = 0.0f;
-    _lateral_out = 0.0f;
-    _throttle_out = -_cleaning_thr_thrust;
+    // translational movement (forward, lateral, throttle)
+    set_translational_thrust(0.0f, 0.0f, -_cleaning_thr_thrust);
 
     /////////////// State Transition ////////////////
     if (!_state_logic_finished && trajectory_finished)
@@ -544,10 +526,8 @@ void AP_NetCleaning::detach_from_net()
     // run attitude controller, keep current attitude
     _attitude_control.keep_current_attitude();
 
-    // translational movement
-    _forward_out = 0.0f;
-    _lateral_out = 0.0f;
-    _throttle_out = _cleaning_thr_thrust;
+    // translational movement(forward, lateral, throttle)
+    set_translational_thrust(0.0f, 0.0f, _approach_thr_thrust);
 
     /////////////// State Transition ////////////////
     // directly set state logic to finished and go into post delay
@@ -568,10 +548,8 @@ void AP_NetCleaning::stop_brush_motors()
     // run attitude controller to hold horizontal attitude
     _attitude_control.keep_current_attitude();
 
-    // no translational movement
-    _forward_out = 0.0f;
-    _lateral_out = 0.0f;
-    _throttle_out = 0.0f;
+    // no translational movement (forward, lateral, throttle)
+    set_translational_thrust(0.0f, 0.0f, 0.0f);
 
     // Todo: Stop the motors. If the motors are supposed to be started and stopped by the companion computer
     // the state information about the net cleaning states can be used to trigger (see ArduSub/GCS_Mavlink.cpp - send_netcleaning_state)
@@ -605,10 +583,8 @@ void AP_NetCleaning::align_horizontal()
     // perform rotational trajectory, update_trajectory returns true if trajectory has finished
     bool trajectory_finished = _attitude_control.update_trajectory();
 
-    // no translational movement
-    _forward_out = 0.0f;
-    _lateral_out = 0.0f;
-    _throttle_out = 0.0f;
+    // no translational movement (forward, lateral, throttle)
+    set_translational_thrust(0.0f, 0.0f, 0.0f);
 
     /////////////// State Transition ////////////////
     if (!_state_logic_finished && trajectory_finished)
@@ -630,14 +606,12 @@ void AP_NetCleaning::detect_net_terminally()
 
 void AP_NetCleaning::surface()
 {
+    // translational movement (forward, lateral, throttle) (forward_out is overwritten by hold_heading_and_distance)
+    // todo: use optical flow stabilization for lateral velocity
+    set_translational_thrust(0.0f, 0.0f, 0.0f);
+
     // hold perpendicular heading with regard to the net and hold _init_net_dist towards net
-    hold_heading_and_distance(_init_net_dist);
-
-    // no lateral movement, (todo: use optical flow stabilization)
-    _lateral_out = 0.0f;
-
-    // no throttle
-    _throttle_out = 0.0f;
+    hold_heading_and_distance(_init_net_dist);    
 
     // ascend
     float dt = (AP_HAL::millis() - _last_state_execution_ms) / 1000.0f;
@@ -652,15 +626,13 @@ void AP_NetCleaning::surface()
 }
 
 void AP_NetCleaning::wait_at_terminal()
-{
+{    
+    // translational movement (forward, lateral, throttle) (forward_out is overwritten by hold_heading_and_distance)
+    // todo: use optical flow stabilization for lateral velocity
+    set_translational_thrust(0.0f, 0.0f, 0.0f);
+
     // hold perpendicular heading with regard to the net and hold _init_net_dist towards net
     hold_heading_and_distance(_init_net_dist);
-
-    // no lateral movement, (todo: use optical flow stabilization)
-    _lateral_out = 0.0f;
-
-    // no throttle
-    _throttle_out = 0.0f;
 }
 
 void AP_NetCleaning::detect_net()
@@ -668,14 +640,8 @@ void AP_NetCleaning::detect_net()
     // run attitude controller, keep current attitude
     _attitude_control.keep_current_attitude();
 
-    // move towards net until the net is detected
-    _forward_out = _detect_net_forw_trust;
-
-    // no lateral movement, (todo: use optical flow stabilization)
-    _lateral_out = 0.0f;
-
-    // no throttle
-    _throttle_out = 0.0f;
+    // no translational movement (forward, lateral, throttle)
+    set_translational_thrust(_detect_net_forw_trust, 0.0f, 0.0f);
 
     /////////////// State Transition ////////////////
 
