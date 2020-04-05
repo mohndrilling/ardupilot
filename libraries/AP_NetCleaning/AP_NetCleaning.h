@@ -28,6 +28,7 @@
 
 #define AP_NETCLEANING_ADJUSTED_BY_OPERATOR_POST_DELAY 10000
 #define AP_NETCLEANING_APPROACHING_INIT_ALTITUDE_POST_DELAY 2000
+#define AP_NETCLEANING_DETECTING_NET_POST_DELAY 0
 #define AP_NETCLEANING_HOLDING_NET_DISTANCE_POST_DELAY 5000
 #define AP_NETCLEANING_ALIGNING_VERTICAL_POST_DELAY 3000
 #define AP_NETCLEANING_STARTING_BRUSH_MOTORS_POST_DELAY 2000
@@ -38,6 +39,8 @@
 #define AP_NETCLEANING_DETACHING_FROM_NET_POST_DELAY 5000
 #define AP_NETCLEANING_STOPPING_BRUSH_MOTORS_POST_DELAY 2000
 #define AP_NETCLEANING_ALIGNING_HORIZONTAL_POST_DELAY 4000
+#define AP_NETCLEANING_SURFACING_POST_DELAY 0
+#define AP_NETCLEANING_WAITING_AT_TERMINAL_POST_DELAY 0
 
 
 
@@ -53,10 +56,7 @@ public:
                     _inav(inav),
                     _attitude_control(attitude_control),
                     _pos_control(pos_control),
-                    _stereo_vision(stereo_vision),
-                    _current_state(State::Inactive),
-                    _prev_state(State::Inactive),
-                    _loop_progress(-1)
+                    _stereo_vision(stereo_vision)
     {
         AP_Param::setup_object_defaults(this, var_info);
     }
@@ -80,7 +80,7 @@ public:
     float get_loop_progress() { return _loop_progress; }
 
     // get net cleaning state to be sent via mavlink
-    uint8_t get_state() { return _current_state; }
+    uint8_t get_state() { return _current_state->_id; }
 
     // whether the current state requires activated brush motors
     bool brush_motors_active() { return _brush_motors_active; }
@@ -89,9 +89,12 @@ public:
     void reset();
 
 protected:
-    enum State
+
+    // enumeration of all available states of the net cleaning state machines
+    enum StateID
     {
       Inactive,
+
       AdjustedByOperator,
       ApproachingInitialAltitude,
       DetectingNetInitially,
@@ -107,18 +110,57 @@ protected:
       AligningHorizontal,
       DetectingNetTerminally,
       Surfacing,
-      WaitingAtTerminal
+      WaitingAtTerminal,
+
+      MAX_NUM_STATES // This has to be the last entry of this enumeration
     };
 
+    // a template for a member function of AP_NetCleaning, containing the logic of a certain state
+    typedef void (AP_NetCleaning::*StateLogicFunction) (void);
+
+    // state specification
+    // id: referring to the StateID enumeration
+    // name: for user information
+    // state_logic_func: a function of the netcleaning class containing the state logic; called when the state is active
+    // post_delay: time in milliseconds which the state remains active before switching to the next state
+    // next_stateA: subsequent state, alternative A
+    // next_stateB: subsequent state, alternative B
+    // next_state: currently each state has a maximum of two possible subsequent states. next_state holds the actual next state (updated in state logic)
+    struct State
+    {
+        const StateID _id;
+        const char *_name;
+        StateLogicFunction _state_logic_func;
+        const uint32_t _post_delay;
+        const StateID _next_stateA;
+        const StateID _next_stateB;
+        StateID _next_state;
+
+        // constructor
+        State(StateID id, const char* name, StateLogicFunction f, uint32_t post_delay,
+              StateID next_stateA, StateID next_stateB = StateID::Inactive)
+            : _id(id), _name(name), _state_logic_func(f), _post_delay(post_delay),
+              _next_stateA(next_stateA), _next_stateB(next_stateB), _next_state(next_stateA) {}
+    };
+
+    // setup_state_machines: creates a State struct for each state contained in StateID enumeration
+    void setup_state_machines();
+
+    // add_state: add state specification to the array of available states
+    void add_state(State * state) {_states[state->_id] = state; }
+
     //////////////////////// State Logic Functions ////////////////////////////////////////////
+    // inactive: Set output to zero
+    void inactive() { set_translational_thrust(0.0f, 0.0f, 0.0f); }
+
     // adjusted_by_operator: Wait for adjustment by operator
     void adjusted_by_operator();
 
     // approach_initial_altitude: Move to initial altitude where net cleaning is about to start
     void approach_initial_altitude();
 
-    // detect_net_initially: move forwards until stereovision module detects the net
-    void detect_net_initially();
+    // detect_net_terminally: move forwards until stereovision module detects the net again
+    void detect_net();
 
     // hold_net_distance(): run distance controller and keep initial distance to net
     void hold_net_distance();
@@ -150,9 +192,6 @@ protected:
     // align_horizontal: perform rotational trajectory back to horizontl orientation
     void align_horizontal();
 
-    // detect_net_terminally: move forwards until stereovision module detects the net again
-    void detect_net_terminally();
-
     // surface: move back to surface while keeping fixed distance and orientation towards net
     void surface();
 
@@ -160,9 +199,6 @@ protected:
     void wait_at_terminal();
 
     ////////////////// Helper Functions //////////////////////////////////////////////////
-    // detect_net_terminally: move forwards until stereovision module detects the net again
-    void detect_net();
-
     // hold_heading_and_distance: keeps desired distance and perpendicular heading w.r.t. the net
     void hold_heading_and_distance(float target_dist);
 
@@ -178,10 +214,10 @@ protected:
     }
 
     // switch_state: switch the state of the state machine
-    void switch_state(State target_state, const char *state_name);
+    void switch_state();
 
     // switch_state_after_post_delay: wait for specified time and switch to target_state afterwards
-    void switch_state_after_post_delay(State target_state, const char *state_name, uint32_t milliseconds);
+    void switch_state_after_post_delay();
 
     // set_state_logic_finished: set timestamp and flag (called when a state has finished its task)
     void set_state_logic_finished();
@@ -195,8 +231,6 @@ protected:
     AP_InertialNav&             _inav;
     AC_PosControl_Sub&          _pos_control;
     AP_StereoVision&            _stereo_vision;
-
-
 
     // stores time difference (seconds) between incoming messages of stereovision module
     // updated each loop
@@ -226,10 +260,13 @@ protected:
     bool _terminate;
 
     // current net cleaning State
-    State _current_state;
+    State *_current_state;
 
     // previous net cleaning State
-    State _prev_state;
+    State *_prev_state;
+
+    // array containing state specification as pointers to the states, set all elements to null
+    State * _states[StateID::MAX_NUM_STATES] = { nullptr };
 
     // flag is true, when the current state is running for the first time
     bool _first_run;
