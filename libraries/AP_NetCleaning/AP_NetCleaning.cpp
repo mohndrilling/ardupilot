@@ -322,13 +322,6 @@ void AP_NetCleaning::detect_net()
 
 void AP_NetCleaning::hold_net_distance()
 {
-    // entry action
-    if (_first_run)
-    {
-        // store the home altitude at the very start of net cleaning
-        _home_altitude = _inav.get_altitude();
-    }
-
     // translational movement (forward, lateral, throttle) (forward_out is overwritten by hold_heading_and_distance)
     // todo: use optical flow stabilization for lateral velocity
     set_translational_thrust(0.0f, 0.0f, 0.0f);
@@ -413,6 +406,13 @@ void AP_NetCleaning::approach_net()
 
 void AP_NetCleaning::attach_brushes()
 {
+    // entry action
+    if (_first_run)
+    {
+        // store the home altitude at the very start of net cleaning
+        _home_altitude = _inav.get_altitude();
+    }
+
     // run net cleaning attitude control
     run_net_cleaning_attitude_control();
 
