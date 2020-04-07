@@ -356,10 +356,10 @@ void AP_NetCleaning::align_vertical()
     // entry action
     if (_first_run)
     {
-        // relative rotation: 90 degrees about x axis, 90 degrees about z axis, ypr-sequence
+        // relative rotation: -90 degrees about x axis, -90 degrees about z axis, ypr-sequence
         // values in centidegrees
-        Vector3f target_euler_angles_cd = Vector3f(9000.0f, 0.0f, 9000.0f);
-        if (_clean_clockwise != AP_NETCLEANING_CLEAN_CLOCKWISE)
+        Vector3f target_euler_angles_cd = Vector3f(-9000.0f, 0.0f, -9000.0f);
+        if (_clean_clockwise)
             target_euler_angles_cd *= -1.0f;
 
         uint32_t duration_ms = static_cast<uint32_t>(_rot_traj_duration * 1000.0f);
@@ -534,10 +534,10 @@ void AP_NetCleaning::align_horizontal()
     // entry action
     if (_first_run)
     {
-        // relative rotation: -90 degrees about x axis, -90 degrees about y axis, ypr-sequence, exact opponent trajectory of 'AligningToNet' state
+        // relative rotation: 90 degrees about x axis, 90 degrees about y axis, ypr-sequence, exact opponent trajectory of 'AligningToNet' state
         // values in centidegrees
-        Vector3f target_euler_angles_cd = Vector3f(-9000.0f, -9000.0f, 0.0f);
-        if (_clean_clockwise != AP_NETCLEANING_CLEAN_CLOCKWISE)
+        Vector3f target_euler_angles_cd = Vector3f(9000.0f, 9000.0f, 0.0f);
+        if (_clean_clockwise)
             target_euler_angles_cd *= -1.0f;
         uint32_t duration_ms = static_cast<uint32_t>(_rot_traj_duration * 1000.0f);
         _attitude_control.start_trajectory(target_euler_angles_cd, duration_ms, true);
