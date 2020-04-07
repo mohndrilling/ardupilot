@@ -16,8 +16,6 @@ bool Sub::md_net_cleaning_init()
     pos_control.set_alt_target(inertial_nav.get_altitude());
     pos_control.set_desired_velocity_z(inertial_nav.get_velocity_z());
 
-    last_pilot_heading = ahrs.yaw_sensor;
-
     // set control frame to 'body'
     g.control_frame = CF_Body;
 
@@ -43,7 +41,6 @@ void Sub::md_net_cleaning_run()
         attitude_control.set_throttle_out(0,true,g.throttle_filt);
         attitude_control.relax_attitude_controllers();
         pos_control.relax_alt_hold_controllers(motors.get_throttle_hover());
-        last_pilot_heading = ahrs.yaw_sensor;
         return;
     }
 
