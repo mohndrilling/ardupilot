@@ -179,7 +179,7 @@ void AP_NetCleaning::setup_state_machines()
                         AP_NETCLEANING_CLEANING_NET_POST_DELAY, StateID::ThrottleDownwards, StateID::DetachingFromNet));
 
     add_state(new State(StateID::ThrottleDownwards, "ThrottleDownwards",&AP_NetCleaning::throttle_downwards,
-                        AP_NETCLEANING_THROTTLE_DOWNWARDS_POST_DELAY, StateID::DetachingFromNet));
+                        AP_NETCLEANING_THROTTLE_DOWNWARDS_POST_DELAY, StateID::CleaningNet));
 
     add_state(new State(StateID::DetachingFromNet, "DetachingFromNet",&AP_NetCleaning::detach_from_net,
                         AP_NETCLEANING_DETACHING_FROM_NET_POST_DELAY, StateID::StoppingBrushMotors));
@@ -208,7 +208,9 @@ void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle
         forward_out = 0.0f;
         lateral_out = 0.0f;
         throttle_out = 0.0f;
+
         _attitude_control.keep_current_attitude();
+
         return;
     }
 
