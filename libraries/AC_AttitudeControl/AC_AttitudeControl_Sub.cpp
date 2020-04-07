@@ -504,8 +504,8 @@ void AC_AttitudeControl_Sub::reset_target_attitude()
     _ahrs.get_quat_body_to_ned(vehicle_attitude);
     vehicle_attitude.to_euler(current_roll, current_pitch, current_yaw);
 
-    // reset angles - roll is set to zero
-    _target_roll_cd = 0.0f;
+    // reset angles
+    _target_roll_cd = RadiansToCentiDegrees(current_roll);
     _target_pitch_cd = RadiansToCentiDegrees(current_pitch);
     _target_yaw_cd = RadiansToCentiDegrees(current_yaw);
 }
