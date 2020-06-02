@@ -233,6 +233,8 @@ void Sub::motors_output()
         motors.set_interlock(true);
         motors.output();
     }
+
+    SRV_Channels::push();
 }
 
 // Initialize new style motor test
