@@ -10,7 +10,6 @@
 [submodule "modules/mavlink"]
 	path = modules/mavlink
 	url = https://github.com/mohndrilling/mavlink
-	branch = md_development
 [submodule "gtest"]
 	path = modules/gtest
 	url = git://github.com/ArduPilot/googletest
