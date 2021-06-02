@@ -25,7 +25,7 @@
 extern const AP_HAL::HAL& hal;
 
 static uint8_t debug_counter = 0;
-static int debug_freq = 20;
+static int debug_freq = 5;
 static int debug_cnt_limit = int(400 / float(debug_freq));
 
 // parameters for the motor class
