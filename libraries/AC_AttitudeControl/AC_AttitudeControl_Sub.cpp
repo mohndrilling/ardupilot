@@ -429,7 +429,7 @@ void AC_AttitudeControl_Sub::start_trajectory(Vector3f target_euler_angles_cd, u
         absolute_target_attitude.from_euler(target_roll, target_pitch, target_yaw);
 
         // difference attitude
-        relative_attitude = absolute_target_attitude * vehicle_attitude.inverse();
+        relative_attitude = vehicle_attitude.inverse() * absolute_target_attitude;
     }
 
     // interprete the relative attitude change of the trajectory as a rotation about a single axis with a specific angle
@@ -440,8 +440,9 @@ void AC_AttitudeControl_Sub::start_trajectory(Vector3f target_euler_angles_cd, u
     _trajectory_start_attitude = vehicle_attitude;
 
     // store duration
-    _trajectory_duration_ms = duration;
-
+    // if duration is set to zero, compute dynamic duration based on axis angle
+    float max_duration = 12000.0f;
+    _trajectory_duration_ms = duration == 0 ? static_cast<uint32_t>(max_duration / M_PI * fabs(_trajectory_axis_angle.length())) : duration;
     // store time stamp of trajectory start
     _trajectory_start_ms = AP_HAL::millis();
 }
