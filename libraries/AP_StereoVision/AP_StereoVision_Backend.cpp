@@ -43,15 +43,15 @@ void AP_StereoVision_Backend::set_net_inspection_data(uint32_t mesh_count, float
     _frontend._ni_state.last_update_ms = AP_HAL::millis();
 }
 
-void AP_StereoVision_Backend::set_phase_corr_data(float phase_shift_x, float phase_shift_y, float phase_shift_sum_x, float phase_shift_sum_y, uint64_t time_delta_usec)
+void AP_StereoVision_Backend::set_opt_flow_data(float opt_flow_x, float opt_flow_y, float opt_flow_sum_x, float opt_flow_sum_y, uint64_t time_delta_usec)
 {
-    Vector2f phase_shift(phase_shift_x, phase_shift_y);
-    Vector2f phase_shift_sum(phase_shift_sum_x, phase_shift_sum_y);
+    Vector2f opt_flow(opt_flow_x, opt_flow_y);
+    Vector2f opt_flow_sum(opt_flow_sum_x, opt_flow_sum_y);
 
-    _frontend._pc_state.phase_shift = phase_shift;
-    _frontend._pc_state.phase_shift_sum = phase_shift_sum;
-    _frontend._pc_state.time_delta_usec = time_delta_usec;
-    _frontend._pc_state.last_update_ms = AP_HAL::millis();
+    _frontend._of_state.opt_flow = opt_flow;
+    _frontend._of_state.opt_flow_sum = opt_flow_sum;
+    _frontend._of_state.time_delta_usec = time_delta_usec;
+    _frontend._of_state.last_update_ms = AP_HAL::millis();
 }
 
 void AP_StereoVision_Backend::set_marker_detection_data(uint8_t marker_visible, uint8_t terminate, float horizontal_pos, uint64_t time_delta_usec)

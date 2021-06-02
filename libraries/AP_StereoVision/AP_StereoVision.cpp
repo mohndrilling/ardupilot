@@ -92,9 +92,9 @@ void AP_StereoVision::update()
         _ni_state.last_processed_sensor_update_ms = _ni_state.last_update_ms;
     }
 
-    // phase correlation
-    if (_pc_state.last_processed_sensor_update_ms != _pc_state.last_update_ms) {
-        _pc_state.last_processed_sensor_update_ms = _pc_state.last_update_ms;
+    // optical flow
+    if (_of_state.last_processed_sensor_update_ms != _of_state.last_update_ms) {
+        _of_state.last_processed_sensor_update_ms = _of_state.last_update_ms;
     }
 
     // marker detection
@@ -126,15 +126,15 @@ bool AP_StereoVision::net_inspection_healthy() const
     return ((AP_HAL::millis() - _ni_state.last_update_ms) < AP_STEREOVISION_TIMEOUT_MS);
 }
 
-// return true if phase correlation is basically healthy (we are receiving data)
-bool AP_StereoVision::phase_corr_healthy() const
+// return true if optical flow is basically healthy (we are receiving data)
+bool AP_StereoVision::opt_flow_healthy() const
 {
     if (!enabled()) {
         return false;
     }
 
     // healthy if we have received sensor messages within the past 300ms
-    return ((AP_HAL::millis() - _pc_state.last_update_ms) < AP_STEREOVISION_TIMEOUT_MS);
+    return ((AP_HAL::millis() - _of_state.last_update_ms) < AP_STEREOVISION_TIMEOUT_MS);
 }
 
 // return true if marker detection is basically healthy (we are receiving data)
@@ -177,7 +177,7 @@ void AP_StereoVision::handle_net_inspection_msg(const mavlink_message_t &msg)
 }
 
 // consume PHASE_CORR MAVLink message
-void AP_StereoVision::handle_phase_correlation_msg(const mavlink_message_t &msg)
+void AP_StereoVision::handle_optical_flow_msg(const mavlink_message_t &msg)
 {
     // exit immediately if not enabled
     if (!enabled()) {
@@ -186,7 +186,7 @@ void AP_StereoVision::handle_phase_correlation_msg(const mavlink_message_t &msg)
 
     // call backend
     if (_driver != nullptr) {
-        _driver->handle_phase_correlation_msg(msg);
+        _driver->handle_optical_flow_msg(msg);
     }
 }
 

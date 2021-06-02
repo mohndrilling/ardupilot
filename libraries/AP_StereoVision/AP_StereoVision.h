@@ -66,8 +66,8 @@ public:
         uint64_t time_delta_usec; // time delta (in usec) between previous and most recent update
         uint32_t last_update_ms;  // system time (in milliseconds) of last update from net inspector
         uint32_t last_processed_sensor_update_ms; // timestamp of last net inspection update that was processed
-        Vector2f phase_shift; // translational shift between current and previous image
-        Vector2f phase_shift_sum; // accumulated shift between current and first received image
+        Vector2f opt_flow; // translational shift between current and previous image
+        Vector2f opt_flow_sum; // accumulated shift between current and first received image
     };
 
     struct MarkerDetectionState {
@@ -92,7 +92,7 @@ public:
     // return true if sensor is basically healthy (we are receiving data)
     bool stereo_vision_healthy() const;
     bool net_inspection_healthy() const;
-    bool phase_corr_healthy() const;
+    bool opt_flow_healthy() const;
     bool marker_detection_healthy() const;
 
     // return a 3D vector defining the position offset of the camera in meters relative to the body frame origin
@@ -101,7 +101,7 @@ public:
     // consume data from MAVLink messages
     void handle_stereo_vision_msg(const mavlink_message_t &msg);
     void handle_net_inspection_msg(const mavlink_message_t &msg);
-    void handle_phase_correlation_msg(const mavlink_message_t &msg);
+    void handle_optical_flow_msg(const mavlink_message_t &msg);
     void handle_marker_detection_msg(const mavlink_message_t &msg);
 
     static const struct AP_Param::GroupInfo var_info[];
@@ -121,11 +121,11 @@ public:
     const uint64_t &get_ni_time_delta_usec() const { return _ni_state.time_delta_usec; }
     const uint32_t &get_last_ni_update_ms() const { return _ni_state.last_update_ms; }
 
-    //phase correlation
-    const Vector2f &get_cur_transl_shift() const { return _pc_state.phase_shift; }
-    const Vector2f &get_acc_transl_shift() const { return _pc_state.phase_shift_sum; }
-    const uint64_t &get_pc_time_delta_usec() const { return _pc_state.time_delta_usec; }
-    const uint32_t &get_last_pc_update_ms() const { return _pc_state.last_update_ms; }
+    // optical flow
+    const Vector2f &get_cur_transl_shift() const { return _of_state.opt_flow; }
+    const Vector2f &get_acc_transl_shift() const { return _of_state.opt_flow_sum; }
+    const uint64_t &get_of_time_delta_usec() const { return _of_state.time_delta_usec; }
+    const uint32_t &get_last_of_update_ms() const { return _of_state.last_update_ms; }
 
     // marker detection
     const bool &marker_visible() const { return _md_state.marker_visible; }
@@ -153,7 +153,7 @@ private:
     // state of backend
     StereoVisionState _stv_state;
     NetInspectionState _ni_state;
-    PhaseCorrState _pc_state;
+    PhaseCorrState _of_state;
     MarkerDetectionState _md_state;
 };
 

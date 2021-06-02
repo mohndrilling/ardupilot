@@ -46,13 +46,13 @@ void AP_StereoVision_MAV::handle_net_inspection_msg(const mavlink_message_t &msg
 }
 
 // consume STEREO_VISION_ODOM MAVLink message
-void AP_StereoVision_MAV::handle_phase_correlation_msg(const mavlink_message_t &msg)
+void AP_StereoVision_MAV::handle_optical_flow_msg(const mavlink_message_t &msg)
 {
     // decode message
     mavlink_phase_corr_t packet;
     mavlink_msg_phase_corr_decode(&msg, &packet);
 
-    set_phase_corr_data(packet.phase_shift_x, packet.phase_shift_y, packet.phase_shift_sum_x, packet.phase_shift_sum_y, packet.time_delta_usec);
+    set_opt_flow_data(packet.phase_shift_x, packet.phase_shift_y, packet.phase_shift_sum_x, packet.phase_shift_sum_y, packet.time_delta_usec);
 }
 
 // consume STEREO_VISION_ODOM MAVLink message

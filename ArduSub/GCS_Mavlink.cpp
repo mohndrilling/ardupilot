@@ -97,13 +97,13 @@ void GCS_MAVLINK_Sub::handle_net_inspection_msg(const mavlink_message_t &msg)
 }
 
 // handle stereo vision messages
-void GCS_MAVLINK_Sub::handle_phase_corr_msg(const mavlink_message_t &msg)
+void GCS_MAVLINK_Sub::handle_optical_flow_msg(const mavlink_message_t &msg)
 {
     AP_StereoVision *stereovision = AP::stereovision();
     if (stereovision == nullptr) {
         return;
     }
-    stereovision->handle_phase_correlation_msg(msg);
+    stereovision->handle_optical_flow_msg(msg);
 }
 
 // handle stereo vision messages
@@ -852,7 +852,7 @@ void GCS_MAVLINK_Sub::handleMessage(const mavlink_message_t &msg)
         break;
 
     case MAVLINK_MSG_ID_PHASE_CORR:
-        handle_phase_corr_msg(msg);
+        handle_optical_flow_msg(msg);
         break;
 
     case MAVLINK_MSG_ID_NETTRACKING_MARKER:
