@@ -28,13 +28,13 @@
 
 #define POSCONTROL_MESH_CNT_LEASH_LENGTH          10.0f  // maximum distance error in m
 
-// optfl lateral controller default definitions
-# define POSCONTROL_OPTFLX_P                      1.0f   // opt flow controller P gain default
-# define POSCONTROL_OPTFLX_I                      3.0f    // opt flow controller I gain default
-# define POSCONTROL_OPTFLX_D                      0.0f    // opt flow controller D gain default
-# define POSCONTROL_OPTFLX_IMAX                   15.0f  // opt flow controller IMAX gain default
-# define POSCONTROL_OPTFLX_FILT_HZ                20.0f   // opt flow controller input filter default
-# define POSCONTROL_OPTFLX_DT                     0.01f   // opt flow controller dt default
+// optfl controller default definitions
+# define POSCONTROL_OPTFL_P                      1.0f   // opt flow controller P gain default
+# define POSCONTROL_OPTFL_I                      3.0f    // opt flow controller I gain default
+# define POSCONTROL_OPTFL_D                      0.0f    // opt flow controller D gain default
+# define POSCONTROL_OPTFL_IMAX                   15.0f  // opt flow controller IMAX gain default
+# define POSCONTROL_OPTFL_FILT_HZ                20.0f   // opt flow controller input filter default
+# define POSCONTROL_OPTFL_DT                     0.01f   // opt flow controller dt default
 
 class AC_PosControl_Sub : public AC_PosControl {
 public:
@@ -93,10 +93,16 @@ public:
     void update_mesh_cnt_controller(float& target_forward, float cur_mesh_cnt, float target_mesh_cnt, float dt, bool update);
 
     /// control lateral velocity based on optical flow input error
-    void update_optfl_controller(float& target_lateral, float cur_optflx, float target_optflx, float dt, bool update);
+    void update_optflx_controller(float& target_lateral, float cur_optflx, float target_optflx, float dt, bool update);
 
     /// reset the integrator of the optical flow controller
-    void relax_optfl_controller() { _pid_optflx.reset_I(); }
+    void relax_optflx_controller() { _pid_optflx.reset_I(); }
+
+    /// control vertical velocity based on optical flow input error
+    void update_optfly_controller(float& target_lateral, float cur_optfly, float target_optfly, float dt, bool update);
+
+    /// reset the integrator of the optical flow controller
+    void relax_optfly_controller() { _pid_optfly.reset_I(); }
 
     // user settable parameters
     static const struct AP_Param::GroupInfo var_info[];
@@ -138,6 +144,13 @@ private:
     AC_P        _p_mesh_cnt;   // gain between mesh count error and derivative mesh count
 
     // optfl controller internal variables
-    AC_PID      _pid_optflx; // opt_flow pid controller
+    AC_PID      _pid_optflx; // opt_flow x pid controller
+    AC_PID      _pid_optfly; // opt_flow y pid controller
+
+    // debugging timestamps
+    uint32_t _last_debug_dist_ms = 0;
+    uint32_t _last_debug_mesh_ms = 0;
+    uint32_t _last_debug_optflx_ms = 0;
+    uint32_t _last_debug_optfly_ms = 0;
 
 };

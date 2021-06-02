@@ -191,6 +191,51 @@ const AP_Param::GroupInfo AC_PosControl_Sub::var_info[] = {
     // @User: Standard
     AP_SUBGROUPINFO(_pid_optflx, "_OPTFLX_", 9, AC_PosControl_Sub, AC_PID),
 
+    // @Param: OPTFLY_P
+    // @DisplayName: Optical flow controller P gain
+    // @Description: Optical flow controller P gain.
+    // @Range: 0.0 0.30
+    // @Increment: 0.005
+    // @User: Standard
+
+    // @Param: OPTFLY_I
+    // @DisplayName: Optical flow controller I gain
+    // @Description: Optical flow controller I gain.
+    // @Range: 0.0 0.5
+    // @Increment: 0.01
+    // @User: Standard
+
+    // @Param: OPTFLY_IMAX
+    // @DisplayName: Optical flow controller I gain maximum
+    // @Description: Optical flow controller I gain maximum.
+    // @Range: 0 1
+    // @Increment: 0.01
+    // @Units: %
+    // @User: Standard
+
+    // @Param: OPTFLY_D
+    // @DisplayName: Optical flow  controller D gain
+    // @Description: Optical flow controller D gain.
+    // @Range: 0.0 0.02
+    // @Increment: 0.001
+    // @User: Standard
+
+    // @Param: OPTFLY_FF
+    // @DisplayName: Optical flow controller feed forward
+    // @Description: Optical flow controller feed forward
+    // @Range: 0 0.5
+    // @Increment: 0.001
+    // @User: Standard
+
+    // @Param: OPTFLY_FILT
+    // @DisplayName: Optical flow controller input frequency in Hz
+    // @Description: Optical flow controller input frequency in Hz
+    // @Range: 1 100
+    // @Increment: 1
+    // @Units: Hz
+    // @User: Standard
+    AP_SUBGROUPINFO(_pid_optfly, "_OPTFLY_", 10, AC_PosControl_Sub, AC_PID),
+
     AP_GROUPEND
 };
 
@@ -206,7 +251,8 @@ AC_PosControl_Sub::AC_PosControl_Sub(AP_AHRS_View& ahrs, const AP_InertialNav& i
     _mesh_cnt_last(0.0f),
     _pid_mesh_vel(POSCONTROL_MESH_CNT_VEL_P, POSCONTROL_MESH_CNT_VEL_I, POSCONTROL_MESH_CNT_VEL_D, 0.0f, POSCONTROL_MESH_CNT_VEL_IMAX, 0.0f, POSCONTROL_MESH_CNT_VEL_FILT_HZ, 0.0f, POSCONTROL_MESH_CNT_VEL_DT),
     _p_mesh_cnt(POSCONTROL_MESH_CNT_P),
-    _pid_optflx(POSCONTROL_OPTFLX_P, POSCONTROL_OPTFLX_I, POSCONTROL_OPTFLX_D, 0.0f, POSCONTROL_OPTFLX_IMAX, 0.0f, POSCONTROL_OPTFLX_FILT_HZ, 0.0f, POSCONTROL_OPTFLX_DT)
+    _pid_optflx(POSCONTROL_OPTFL_P, POSCONTROL_OPTFL_I, POSCONTROL_OPTFL_D, 0.0f, POSCONTROL_OPTFL_IMAX, 0.0f, POSCONTROL_OPTFL_FILT_HZ, 0.0f, POSCONTROL_OPTFL_DT),
+    _pid_optfly(POSCONTROL_OPTFL_P, POSCONTROL_OPTFL_I, POSCONTROL_OPTFL_D, 0.0f, POSCONTROL_OPTFL_IMAX, 0.0f, POSCONTROL_OPTFL_FILT_HZ, 0.0f, POSCONTROL_OPTFL_DT)
 {}
 
 
@@ -414,10 +460,14 @@ void AC_PosControl_Sub::update_dist_controller(float& target_forward, float cur_
         target_forward = -1.0f * _pid_vel_dist.update_all(vel_dist_target, cur_vel_dist, true);
 
         // debugging output
-        gcs().send_named_float("d_dst", desired_dist);
-        gcs().send_named_float("dst", cur_dist);
-        gcs().send_named_float("dstvel", cur_vel_dist);
-        gcs().send_named_float("d_dstvel", vel_dist_target);
+        if (AP_HAL::millis() - _last_debug_dist_ms > 200)
+        {
+            gcs().send_named_float("d_dst", target_dist);
+            gcs().send_named_float("dst", cur_dist);
+            gcs().send_named_float("dstvel", cur_vel_dist);
+            gcs().send_named_float("d_dstvel", vel_dist_target);
+            _last_debug_dist_ms = AP_HAL::millis();
+        }
     }
     else {
         p = _pid_vel_dist.get_p();
@@ -462,10 +512,14 @@ void AC_PosControl_Sub::update_mesh_cnt_controller(float& target_forward, float 
         target_forward = -1.0f * _pid_mesh_vel.update_all(mesh_cnt_vel_target, cur_mesh_cnt_vel, true);
 
         // debugging output
-        gcs().send_named_float("d_mshcnt", target_mesh_cnt);
-        gcs().send_named_float("mshcnt", cur_mesh_cnt);
-        gcs().send_named_float("mshvel", cur_mesh_cnt_vel);
-        gcs().send_named_float("d_mshvel", mesh_cnt_vel_target);
+        if (AP_HAL::millis() - _last_debug_mesh_ms > 200)
+        {
+            gcs().send_named_float("d_mshcnt", target_mesh_cnt);
+            gcs().send_named_float("mshcnt", cur_mesh_cnt);
+            gcs().send_named_float("mshvel", cur_mesh_cnt_vel);
+            gcs().send_named_float("d_mshvel", mesh_cnt_vel_target);
+            _last_debug_mesh_ms = AP_HAL::millis();
+        }
     }
     else {
         p = _pid_mesh_vel.get_p();
@@ -481,7 +535,7 @@ void AC_PosControl_Sub::update_mesh_cnt_controller(float& target_forward, float 
 }
 
 
-void AC_PosControl_Sub::update_optfl_controller(float& target_lateral, float cur_optflx, float target_optflx, float dt, bool update)
+void AC_PosControl_Sub::update_optflx_controller(float& target_lateral, float cur_optflx, float target_optflx, float dt, bool update)
 {
     // simple pid controller for optfl control
     float p, i, d, ff;
@@ -503,7 +557,39 @@ void AC_PosControl_Sub::update_optfl_controller(float& target_lateral, float cur
     // set the cutoff frequency of the motors lateral input filter
     _motors.set_lateral_filter_cutoff(POSCONTROL_LATERAL_CUTOFF_FREQ);
 
-    //debug output
-    gcs().send_named_float("optflx", cur_optflx);
-    gcs().send_named_float("d_optflx", target_optflx);
+    // debugging output
+    if (AP_HAL::millis() - _last_debug_optflx_ms > 200)
+    {
+        gcs().send_named_float("optflx", cur_optflx);
+        gcs().send_named_float("d_optflx", target_optflx);
+        _last_debug_optflx_ms = AP_HAL::millis();
+    }
+}
+
+void AC_PosControl_Sub::update_optfly_controller(float& target_vertical, float cur_optfly, float target_optfly, float dt, bool update)
+{
+    // simple pid controller for optfl control
+    float p, i, d, ff;
+
+    if (update)
+    {
+        _pid_optfly.set_dt(dt);
+        target_vertical = _pid_optfly.update_all(target_optfly, cur_optfly, true);
+    }
+    else {
+        p = _pid_optfly.get_p();
+        i = _pid_optfly.get_i();
+        d = _pid_optfly.get_d();
+        ff = _pid_optfly.get_ff();
+
+        target_vertical = p + i + d + ff;
+    }
+
+    // debugging output
+    if (AP_HAL::millis() - _last_debug_optfly_ms > 200)
+    {
+        gcs().send_named_float("optfly", cur_optfly);
+        gcs().send_named_float("d_optfly", target_optfly);
+        _last_debug_optfly_ms = AP_HAL::millis();
+    }
 }
