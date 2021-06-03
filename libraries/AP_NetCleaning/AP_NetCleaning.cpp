@@ -674,13 +674,13 @@ void AP_NetCleaning::set_state_logic_finished()
 bool AP_NetCleaning::detect_loop_closure()
 {
     // detect loop closure by elapsed yaw angle (prone to measurement drifts)
-    return fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) > 360.0f;
+    return fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) > radians(360.0f);
 }
 
 void AP_NetCleaning::update_loop_progress()
 {
-    //progress in percent (elapsed angle / 360 degrees ' 100)
-    float tmp_loop_progress = fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) / 3.6f;
+    //progress in percent (elapsed angle / 2pi * 100)
+    float tmp_loop_progress = fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) * 50.0f / M_PI;
 
     // only update if it has increased since last run
     if (tmp_loop_progress > _loop_progress)

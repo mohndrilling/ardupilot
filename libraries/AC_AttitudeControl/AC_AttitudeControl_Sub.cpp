@@ -635,14 +635,15 @@ void AC_AttitudeControl_Sub::parameter_sanity_check()
 
 void AC_AttitudeControl_Sub::tangling_monitor_update()
 {
-    float cur_yaw_deg = degrees(_ahrs.get_current_yaw());
+    // current yaw (radians)
+    float cur_yaw = _ahrs.get_current_yaw();
 
     // get difference yaw angle with regard to last measurement
     // if yaw angle jumped from 180 to -180 add 360 degrees, if yaw angle jumped from 180 to -180 subtract 360 degrees
-    float delta_yaw = cur_yaw_deg - _last_yaw;
-    _last_yaw = cur_yaw_deg;
+    float delta_yaw = cur_yaw - _last_yaw;
+    _last_yaw = cur_yaw;
 
-    delta_yaw += (delta_yaw > 180.0f) ? -360.0f : (delta_yaw <- 180.0f) ? 360.0f : 0.0f;
+    delta_yaw += (delta_yaw > M_PI) ? -2*M_PI : (delta_yaw < -M_PI) ? 2*M_PI : 0.0f;
 
     _yaw_accumulated += delta_yaw;
 

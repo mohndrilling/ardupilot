@@ -335,27 +335,31 @@ void AP_NetTracking::detect_net()
     if (_use_optical_marker_termination && _stereo_vision.marker_visible())
     {
         set_state_logic_finished();
-        _attitude_control.reset_target_attitude();
-        yaw_rate = 0.0f;
     }
     else if (_stereo_vision.stereo_vision_healthy())
     {
         // relative yaw in degrees with regard to detected netfloat
         delta_yaw = _net_detect_yaw_filt.apply(_stereo_vision.get_delta_yaw(), dt);
         yaw_rate = constrain_float(0.25f * fabs(delta_yaw) - 250.0f, 500.0f, 1500.0f);
-        // switch state if distance to the net is close to or smaller than desired distance
+        // consider net detected if the yaw error towards the net gets smaller than certain threshold (centidegrees!)
         if (fabs(delta_yaw) < 100.0f)
         {
             set_state_logic_finished();
-            _attitude_control.reset_target_attitude();
-            yaw_rate = 0.0f;
         }
     }
+
 
     if (is_zero(_net_detect_yaw_rate_dir) && AP_HAL::millis() - _first_state_execution_ms > 1000)
         _net_detect_yaw_rate_dir = is_positive(delta_yaw) ? -1.0f : 1.0f;
 
+
     yaw_rate = _net_detect_yaw_rate_filt.apply(_net_detect_yaw_rate_dir * yaw_rate, dt);
+
+    if (_state_logic_finished)
+    {
+        _attitude_control.reset_target_attitude();
+        yaw_rate = 0.0f;
+    }
 
     _attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(0.0f, 0.0f, yaw_rate);
 }
@@ -462,7 +466,7 @@ void AP_NetTracking::scan()
         // debugging output
         if (AP_HAL::millis() - _last_debug_dyaw_ms > 200)
         {
-            gcs().send_named_float("dyaw", fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw));
+            gcs().send_named_float("dyaw", degrees(fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw)));
             _last_debug_dyaw_ms = AP_HAL::millis();
         }
 
@@ -616,7 +620,7 @@ bool AP_NetTracking::detect_loop_closure()
         // This function shall only return true if the ROV has performed a full scanning loop.
         // As markers are still visible right after starting a loop, we check for the yaw angle of the ROV
         // of having exceeded a certain minimum angle since start of the last loop
-        if(fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) < 20.0f)
+        if(fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) < radians(90.0f))
             return false;
 
         else
@@ -625,31 +629,9 @@ bool AP_NetTracking::detect_loop_closure()
     else
     {
         // detect loop closure by elapsed yaw angle (prone to measurement drifts)
-        return fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) > 20.0f;
+        return fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) > radians(360.0f);
     }
 }
-
-//void AP_NetTracking::update_throttle_out(float &throttle_out)
-//{
-//    // constantly moving downwards
-//    throttle_out = - _throttle_speed;
-
-//    if (_sensor_updates.stv_updated)
-//        update_opt_flow();
-
-//    if (fabs(_opt_flow_sum_y - _initial_opt_flow_sumy) > _opt_flow_vertical_dist)
-//    {
-//        _initial_yaw = _attitude_control.get_accumulated_yaw();
-//        gcs().send_text(MAV_SEVERITY_INFO, "Changing to Scanning");
-//    }
-
-//    // net tracking will be terminated after the next loop, if a marker tape is used and a termination marker is detected
-//    if (_use_optical_marker_termination && !_terminate && _stereo_vision.marker_terminate())
-//    {
-//        gcs().send_text(MAV_SEVERITY_INFO, "Termination marker detected");
-//        _terminate = true;
-//    }
-//}
 
 void AP_NetTracking::update_opt_flow()
 {
@@ -675,8 +657,8 @@ void AP_NetTracking::update_opt_flow()
 
 void AP_NetTracking::update_loop_progress()
 {
-    //progress in percent (elapsed angle / 360 degrees ' 100)
-    float tmp_loop_progress = fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) / 3.6f;
+    //progress in percent (elapsed angle / 2pi * 100)
+    float tmp_loop_progress = fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) * 50.0f / M_PI;
 
     // only update if it has increased since last run
     if (tmp_loop_progress > _loop_progress)
