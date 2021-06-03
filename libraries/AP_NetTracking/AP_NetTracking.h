@@ -267,6 +267,7 @@ protected:
     AP_Float _start_tracking_depth;
     AP_Float _finish_tracking_depth;
     AP_Float _detect_net_forw_trust;
+    AP_Float _manual_adjustment_duration;
     AP_Float _climb_rate;
 
     uint32_t _last_stereo_update_ms;

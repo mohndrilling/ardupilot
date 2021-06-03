@@ -121,6 +121,15 @@ const AP_Param::GroupInfo AP_NetTracking::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("CLIMB_RATE", 13, AP_NetTracking, _climb_rate, AP_NETTRACKING_CLIMBING_RATE_CMS_DEFAULT),
 
+    // @Param: T_ADJUST
+    // @DisplayName: Time (s) for operator to manually adjust AUV heading once in water
+    // @Description: Time (s) for operator to manually adjust AUV heading once in water
+    // @Units: s
+    // @Range: 0.0 100.0
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("T_ADJUST", 14, AP_NetTracking, _manual_adjustment_duration, AP_NETTRACKING_ADJUSTED_BY_OPERATOR_POST_DELAY),
+
     AP_GROUPEND
 };
 
@@ -167,7 +176,7 @@ void AP_NetTracking::setup_state_machines()
                         AP_NETTRACKING_AUTO_LEVEL_POST_DELAY, StateID::AdjustedByOperator));
 
     add_state(new State(StateID::AdjustedByOperator, "AdjustedByOperator",&AP_NetTracking::adjusted_by_operator,
-                        AP_NETTRACKING_ADJUSTED_BY_OPERATOR_POST_DELAY, StateID::ApproachingInitialAltitude));
+                        _manual_adjustment_duration*1000.0f, StateID::ApproachingInitialAltitude));
 
     add_state(new State(StateID::ApproachingInitialAltitude, "ApproachingInitialAltitude",&AP_NetTracking::approach_initial_altitude,
                         AP_NETTRACKING_APPROACHING_INIT_ALTITUDE_POST_DELAY, StateID::DetectingNetInitially));
@@ -506,7 +515,6 @@ void AP_NetTracking::throttle_downwards()
     if (!_state_logic_finished && fabs(_opt_flow_sum_y - _initial_opt_flow_sumy) > _opt_flow_vertical_dist)
     {
         _terminate = _use_optical_marker_termination ? _stereo_vision.marker_terminate() : _inav.get_altitude() <= -_finish_tracking_depth;
-        gcs().send_text(MAV_SEVERITY_INFO, "%f, %f", _inav.get_altitude(), float(_finish_tracking_depth));
         set_state_logic_finished();
     }
 }
@@ -620,7 +628,7 @@ bool AP_NetTracking::detect_loop_closure()
         // This function shall only return true if the ROV has performed a full scanning loop.
         // As markers are still visible right after starting a loop, we check for the yaw angle of the ROV
         // of having exceeded a certain minimum angle since start of the last loop
-        if(fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) < radians(90.0f))
+        if(fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) < radians(40.0f))
             return false;
 
         else
@@ -629,7 +637,7 @@ bool AP_NetTracking::detect_loop_closure()
     else
     {
         // detect loop closure by elapsed yaw angle (prone to measurement drifts)
-        return fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) > radians(360.0f);
+        return fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) > radians(20.0f);
     }
 }
 
