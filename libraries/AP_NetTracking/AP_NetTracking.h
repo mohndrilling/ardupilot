@@ -13,7 +13,7 @@
 
 #define AP_NETTRACKING_NETSHAPE_DEFAULT NetShape::FishFarm
 #define AP_NETTRACKING_DISTANCE_DEFAULT 50
-#define AP_NETTRACKING_INITIAL_NET_DISTANCE_TOLERANCE_DEFAULT 10.0f
+#define AP_NETTRACKING_INITIAL_NET_DISTANCE_TOLERANCE_DEFAULT 10
 #define AP_NETTRACKING_DETECTING_NET_FORWARD_THRUST_DEFAULT 0.15f
 #define AP_NETTRACKING_VELOCITY_DEFAULT 0.0f
 #define AP_NETTRACKING_OPTFLOW_VELOCITY_FACTOR 2.0f
@@ -24,8 +24,8 @@
 #define AP_NETTRACKING_OPT_FLOW_CUTOFF_FREQ_DEFAULT 0.2f
 #define AP_NETTRACKING_DETECT_NET_YAW_FILT_CUTOFF_FREQ_DEFAULT 0.5f
 #define AP_NETTRACKING_DETECT_NET_YAWRATE_FILT_CUTOFF_FREQ_DEFAULT 0.5f
-#define AP_NETTRACKING_START_TRACKING_DEPTH_DEFAULT 100.0f
-#define AP_NETTRACKING_FINISH_TRACKING_DEPTH_DEFAULT 300.0f
+#define AP_NETTRACKING_START_TRACKING_DEPTH_DEFAULT 100
+#define AP_NETTRACKING_FINISH_TRACKING_DEPTH_DEFAULT 300
 #define AP_NETTRACKING_CLIMBING_RATE_CMS_DEFAULT 10.0f
 
 #define AP_NETTRACKING_AUTO_LEVEL_POST_DELAY 2000
@@ -103,7 +103,6 @@ protected:
       HoldingNetDistance,
       Scanning,
       ThrottleDownwards,
-      ReturnToHomeHeading,
       Surfacing,
       WaitingAtTerminal,
 
@@ -248,16 +247,16 @@ protected:
     // Parameters
     AP_Int8  _net_shape;
     AP_Int16 _tracking_distance;
-    AP_Float _tracking_distance_tolerance;
+    AP_Int8  _tracking_distance_tolerance;
     AP_Float _tracking_velocity;
     AP_Int8  _velocity_ctrl;
     AP_Int8  _use_optical_marker_termination;
     AP_Float _opt_flow_cutoff_freq;
-    AP_Float _opt_flow_vertical_dist;
-    AP_Float _start_tracking_depth;
-    AP_Float _finish_tracking_depth;
+    AP_Int16 _opt_flow_vertical_dist;
+    AP_Int16 _start_tracking_depth;
+    AP_Int16 _finish_tracking_depth;
     AP_Float _detect_net_forw_trust;
-    AP_Float _manual_adjustment_duration;
+    AP_Int8  _manual_adjustment_duration;
     AP_Float _climb_rate;
 
     uint32_t _last_stereo_update_ms;

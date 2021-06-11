@@ -17,7 +17,7 @@ const AP_Param::GroupInfo AP_NetTracking::var_info[] = {
     // @DisplayName: Desired distance to the net during net tracking
     // @Description: Desired distance to the net during net tracking
     // @Units: cm
-    // @Range: 10.0 100.0
+    // @Range: 10 100
     // @Increment: 1
     // @User: Advanced
     AP_GROUPINFO("DISTANCE", 1, AP_NetTracking, _tracking_distance, AP_NETTRACKING_DISTANCE_DEFAULT),
@@ -26,7 +26,7 @@ const AP_Param::GroupInfo AP_NetTracking::var_info[] = {
     // @DisplayName: Tolerance of the AUV's distance to the net
     // @Description: Tolerance of the AUV's distance to the net
     // @Units: cm
-    // @Range: 0.0 50.0
+    // @Range: 0 50
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("DST_TOL", 2, AP_NetTracking, _tracking_distance_tolerance, AP_NETTRACKING_INITIAL_NET_DISTANCE_TOLERANCE_DEFAULT),
@@ -59,7 +59,7 @@ const AP_Param::GroupInfo AP_NetTracking::var_info[] = {
     // @Param: OPTFL_VDST
     // @DisplayName: By how many pixels the ROV is supposed to move vertically to the next scanning level
     // @Description: By how many pixels the ROV is supposed to move vertically to the next scanning level
-    // @Range: 10.0 600.0
+    // @Range: 10 600
     // @Increment: 1
     // @User: Advanced
     AP_GROUPINFO("OPTFL_VDST", 8, AP_NetTracking, _opt_flow_vertical_dist, AP_NETTRACKING_OPT_FLOW_VERTICAL_DIST_DEFAULT),
@@ -75,7 +75,7 @@ const AP_Param::GroupInfo AP_NetTracking::var_info[] = {
     // @DisplayName: Altitude at which the net tracking starts
     // @Description: Altitude at which the net tracking starts
     // @Units: cm
-    // @Range: 10.0 1000.0
+    // @Range: 10 1000
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("STRT_DEPTH", 10, AP_NetTracking, _start_tracking_depth, AP_NETTRACKING_START_TRACKING_DEPTH_DEFAULT),
@@ -84,7 +84,7 @@ const AP_Param::GroupInfo AP_NetTracking::var_info[] = {
     // @DisplayName: Altitude at which the net tracking ends
     // @Description: Altitude at which the net tracking ends
     // @Units: cm
-    // @Range: 10.0 3000.0
+    // @Range: 10 3000
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("END_DEPTH", 11, AP_NetTracking, _finish_tracking_depth, AP_NETTRACKING_FINISH_TRACKING_DEPTH_DEFAULT),
@@ -110,7 +110,7 @@ const AP_Param::GroupInfo AP_NetTracking::var_info[] = {
     // @DisplayName: Time (s) for operator to manually adjust AUV heading once in water
     // @Description: Time (s) for operator to manually adjust AUV heading once in water
     // @Units: s
-    // @Range: 0.0 100.0
+    // @Range: 0 100
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("T_ADJUST", 14, AP_NetTracking, _manual_adjustment_duration, AP_NETTRACKING_ADJUSTED_BY_OPERATOR_POST_DELAY),
@@ -374,7 +374,7 @@ void AP_NetTracking::approach_net()
         float cur_dist = _stereo_vision.get_distance();
 
         // desired distance (m)
-        float d_dist = float(_tracking_distance) / 100.0f;
+        float d_dist = _tracking_distance / 100.0f;
 
         // switch state if distance to the net is close to or smaller than desired distance
         if (cur_dist - d_dist < _tracking_distance_tolerance / 100.0f)
@@ -398,7 +398,7 @@ void AP_NetTracking::hold_net_distance()
         float cur_dist = _stereo_vision.get_distance();
 
         // desired distance (m)
-        float d_dist = float(_tracking_distance) / 100.0f;
+        float d_dist = _tracking_distance / 100.0f;
 
         // check whether task is finished
         if (fabs(cur_dist - d_dist) < _tracking_distance_tolerance / 100.0f)
@@ -490,7 +490,7 @@ void AP_NetTracking::throttle_downwards()
     // hold perpendicular heading with regard to the net and hold _tracking_distance towards net
     hold_heading_and_distance(_tracking_distance);    
 
-    float doptfl_fac = 1.0f - constrain_float(fabs(_opt_flow_sum_y - _initial_opt_flow_sumy) / _opt_flow_vertical_dist, 0.0f, 1.0f);
+    float doptfl_fac = 1.0f - constrain_float(fabs(_opt_flow_sum_y - _initial_opt_flow_sumy) / float(_opt_flow_vertical_dist), 0.0f, 1.0f);
     float doptfl_throttle_start = 0.3f;
     float climb_rate = _climb_rate * constrain_float(doptfl_fac / doptfl_throttle_start, 0.0f, 1.0f);
     climb_rate = _state_logic_finished ? 0.0f : constrain_float(climb_rate, 5.0f, _climb_rate);
@@ -594,7 +594,7 @@ void AP_NetTracking::hold_heading_and_distance(float target_dist)
     float cur_dist = _stereo_vision.get_distance();
 
     // desired distance (m)
-    float d_dist = float(target_dist) / 100.0f;
+    float d_dist = target_dist / 100.0f;
 
     // get forward command from distance controller
     _pos_control.update_dist_controller(_forward_out, cur_dist, d_dist, _sensor_intervals.stv_dt, _sensor_updates.stv_updated);

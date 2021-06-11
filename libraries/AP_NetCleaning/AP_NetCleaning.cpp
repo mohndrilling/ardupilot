@@ -10,7 +10,7 @@ const AP_Param::GroupInfo AP_NetCleaning::var_info[] = {
     // @DisplayName: Distance of the AUV when aligning to the net
     // @Description: Distance of the AUV when aligning to the net
     // @Units: cm
-    // @Range: 10.0 100.0
+    // @Range: 10 100
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("NET_DST", 0, AP_NetCleaning, _init_net_dist, AP_NETCLEANING_INITIAL_NET_DISTANCE_DEFAULT),
@@ -19,7 +19,7 @@ const AP_Param::GroupInfo AP_NetCleaning::var_info[] = {
     // @DisplayName: Tolerance of the AUV's distance to the net
     // @Description: Tolerance of the AUV's distance to the net
     // @Units: cm
-    // @Range: 0.0 50.0
+    // @Range: 0 50
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("DST_TOL", 1, AP_NetCleaning, _init_net_dist_tolerance, AP_NETCLEANING_INITIAL_NET_DISTANCE_TOLERANCE_DEFAULT),
@@ -60,7 +60,7 @@ const AP_Param::GroupInfo AP_NetCleaning::var_info[] = {
     // @DisplayName: Lane width between two cleaning levels
     // @Description: Lane width between two cleaning levels
     // @Units: cm
-    // @Range: 10.0 100.0
+    // @Range: 10 100
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("LANE_WIDTH", 6, AP_NetCleaning, _lane_width, AP_NETCLEANING_LANE_WIDTH_DEFAULT),
@@ -69,7 +69,7 @@ const AP_Param::GroupInfo AP_NetCleaning::var_info[] = {
     // @DisplayName: Altitude at which the net cleaning starts
     // @Description: Altitude at which the net cleaning starts
     // @Units: cm
-    // @Range: 10.0 1000.0
+    // @Range: 10 1000
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("STRT_DEPTH", 7, AP_NetCleaning, _start_cleaning_altitude, AP_NETCLEANING_START_CLEANING_DEPTH_DEFAULT),
@@ -78,7 +78,7 @@ const AP_Param::GroupInfo AP_NetCleaning::var_info[] = {
     // @DisplayName: Altitude at which the net cleaning ends
     // @Description: Altitude at which the net cleaning ends
     // @Units: cm
-    // @Range: 10.0 3000.0
+    // @Range: 10 3000
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("END_DEPTH", 8, AP_NetCleaning, _finish_cleaning_altitude, AP_NETCLEANING_FINISH_CLEANING_DEPTH_DEFAULT),
@@ -96,7 +96,7 @@ const AP_Param::GroupInfo AP_NetCleaning::var_info[] = {
     // @DisplayName: Duration of rotational trajectory when aligning to net
     // @Description: Duration of rotational trajectory when aligning to net
     // @Units: s
-    // @Range: 0.0 100.0
+    // @Range: 0 100
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("ROT_DUR", 10, AP_NetCleaning, _rot_traj_duration, AP_NETCLEANING_ROT_TRAJECTORY_DURATION_DEFAULT),
@@ -105,7 +105,7 @@ const AP_Param::GroupInfo AP_NetCleaning::var_info[] = {
     // @DisplayName: Duration of altitude trajectory when switching altitude levels
     // @Description: Duration of altitude trajectory when switching altitude levels
     // @Units: s
-    // @Range: 0.0 100.0
+    // @Range: 0 100
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("THR_DUR", 11, AP_NetCleaning, _alt_traj_duration, AP_NETCLEANING_ALT_TRAJECTORY_DURATION_DEFAULT),
@@ -312,7 +312,7 @@ void AP_NetCleaning::detect_net()
         float cur_dist = _stereo_vision.get_distance();
 
         // desired distance (m)
-        float d_dist = float(_init_net_dist) / 100.0f;
+        float d_dist = _init_net_dist / 100.0f;
 
         // switch state if distance to the net is close to or smaller than desired distance
         if (cur_dist - d_dist < _init_net_dist_tolerance / 100.0f)
@@ -336,7 +336,7 @@ void AP_NetCleaning::hold_net_distance()
         float cur_dist = _stereo_vision.get_distance();
 
         // desired distance (m)
-        float d_dist = float(_init_net_dist) / 100.0f;
+        float d_dist = _init_net_dist / 100.0f;
 
         // check whether task is finished
         if (fabs(cur_dist - d_dist) < _init_net_dist_tolerance / 100.0f)
@@ -471,12 +471,12 @@ void AP_NetCleaning::throttle_downwards()
         if (cur_altitude < _lane_width - _finish_cleaning_altitude)
         {
             // set absolute altitude target to finish_cleaning_depth
-            _pos_control.start_altitude_trajectory(static_cast<float>(-_finish_cleaning_altitude), duration_ms, false);
+            _pos_control.start_altitude_trajectory(-_finish_cleaning_altitude, duration_ms, false);
         }
         else
         {
             // move to the next deeper lane
-            _pos_control.start_altitude_trajectory(static_cast<float>(-_lane_width), duration_ms, true);
+            _pos_control.start_altitude_trajectory(-_lane_width, duration_ms, true);
         }
 
         // if the lane after the next one is smaller than 20 % of the default lane width, terminate after next cleaning loop already
@@ -629,7 +629,7 @@ void AP_NetCleaning::hold_heading_and_distance(float target_dist)
     float cur_dist = _stereo_vision.get_distance();
 
     // desired distance (m)
-    float d_dist = float(target_dist) / 100.0f;
+    float d_dist = target_dist / 100.0f;
 
     // get forward command from distance controller
     _pos_control.update_dist_controller(_forward_out, cur_dist, d_dist, _sensor_intervals.stv_dt, _sensor_updates.stv_updated);
