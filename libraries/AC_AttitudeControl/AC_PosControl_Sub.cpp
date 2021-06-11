@@ -76,76 +76,6 @@ const AP_Param::GroupInfo AC_PosControl_Sub::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("_DST_LEASH", 4, AC_PosControl_Sub, _leash_dist, POSCONTROL_DIST_LEASH_LENGTH),
 
-    // @Param: MSH_VEL_P
-    // @DisplayName: Mesh count velocity controller P gain
-    // @Description: Mesh count velocity controller P gain.
-    // @Range: 0.0 0.30
-    // @Increment: 0.005
-    // @User: Standard
-
-    // @Param: MSH_VEL_I
-    // @DisplayName: Mesh count velocity controller I gain
-    // @Description: Mesh count velocity controller I gain.
-    // @Range: 0.0 0.5
-    // @Increment: 0.01
-    // @User: Standard
-
-    // @Param: MSH_VEL_IMAX
-    // @DisplayName: Mesh count velocity controller I gain maximum
-    // @Description: Mesh count velocity controller I gain maximum.
-    // @Range: 0 1
-    // @Increment: 0.01
-    // @Units: %
-    // @User: Standard
-
-    // @Param: MSH_VEL_D
-    // @DisplayName: Mesh count velocity controller D gain
-    // @Description: Mesh count velocity controller D gain.
-    // @Range: 0.0 0.02
-    // @Increment: 0.001
-    // @User: Standard
-
-    // @Param: MSH_VEL_FF
-    // @DisplayName: Mesh count velocity controller feed forward
-    // @Description: Mesh count velocity controller feed forward
-    // @Range: 0 0.5
-    // @Increment: 0.001
-    // @User: Standard
-
-    // @Param: MSH_VEL_FILT
-    // @DisplayName: Mesh count velocity controller input frequency in Hz
-    // @Description: Mesh count velocity controller input frequency in Hz
-    // @Range: 1 100
-    // @Increment: 1
-    // @Units: Hz
-    // @User: Standard
-    AP_SUBGROUPINFO(_pid_mesh_vel, "_MSH_VEL_", 5, AC_PosControl_Sub, AC_PID),
-
-    // @Param: _MSH_CNT_P
-    // @DisplayName: Distance controller P gain
-    // @Description: Distance controller P gain.  Converts mesh count error to target velocity
-    // @Range: 0.500 2.000
-    // @User: Standard
-    AP_SUBGROUPINFO(_p_mesh_cnt, "_MSH_CNT_", 6, AC_PosControl_Sub, AC_P),
-
-    // @Param: _DMSH_FILT
-    // @DisplayName: Low pass filter of the derivation of the current mesh count
-    // @Description: Low pass filter of the derivation of the current mesh count
-    // @Units: Hz
-    // @Range: 0.5 5
-    // @Increment: 0.1
-    // @User: Advanced
-    AP_GROUPINFO("_DMSH_FILT", 7, AC_PosControl_Sub, _mesh_cnt_vel_filter_cutoff, POSCONTROL_MESH_CNT_DERIVATION_FILTER_HZ),
-
-    // @Param: _MSH_LEASH
-    // @DisplayName: Maximum value of the mesh count error during net tracking
-    // @Description: Maximum value of the mesh count error during net tracking
-    // @Units: Hz
-    // @Range: 0.5 5
-    // @Increment: 0.1
-    // @User: Advanced
-    AP_GROUPINFO("_MSH_LEASH", 8, AC_PosControl_Sub, _leash_mesh_cnt, POSCONTROL_MESH_CNT_LEASH_LENGTH),
-
     // @Param: OPTFLX_P
     // @DisplayName: Optical flow controller P gain
     // @Description: Optical flow controller P gain.
@@ -248,9 +178,6 @@ AC_PosControl_Sub::AC_PosControl_Sub(AP_AHRS_View& ahrs, const AP_InertialNav& i
     _dist_last(0.0f),
     _pid_vel_dist(POSCONTROL_DIST_VEL_P, POSCONTROL_DIST_VEL_I, POSCONTROL_DIST_VEL_D, 0.0f, POSCONTROL_DIST_VEL_IMAX, 0.0f, POSCONTROL_DIST_VEL_FILT_HZ, 0.0f, POSCONTROL_DIST_VEL_DT),
     _p_pos_dist(POSCONTROL_DIST_P),
-    _mesh_cnt_last(0.0f),
-    _pid_mesh_vel(POSCONTROL_MESH_CNT_VEL_P, POSCONTROL_MESH_CNT_VEL_I, POSCONTROL_MESH_CNT_VEL_D, 0.0f, POSCONTROL_MESH_CNT_VEL_IMAX, 0.0f, POSCONTROL_MESH_CNT_VEL_FILT_HZ, 0.0f, POSCONTROL_MESH_CNT_VEL_DT),
-    _p_mesh_cnt(POSCONTROL_MESH_CNT_P),
     _pid_optflx(POSCONTROL_OPTFL_P, POSCONTROL_OPTFL_I, POSCONTROL_OPTFL_D, 0.0f, POSCONTROL_OPTFL_IMAX, 0.0f, POSCONTROL_OPTFL_FILT_HZ, 0.0f, POSCONTROL_OPTFL_DT),
     _pid_optfly(POSCONTROL_OPTFL_P, POSCONTROL_OPTFL_I, POSCONTROL_OPTFL_D, 0.0f, POSCONTROL_OPTFL_IMAX, 0.0f, POSCONTROL_OPTFL_FILT_HZ, 0.0f, POSCONTROL_OPTFL_DT)
 {}
@@ -481,59 +408,6 @@ void AC_PosControl_Sub::update_dist_controller(float& target_forward, float cur_
     // set the cutoff frequency of the motors forward input filter
     _motors.set_forward_filter_cutoff(POSCONTROL_FORWARD_CUTOFF_FREQ);
 }
-
-void AC_PosControl_Sub::update_mesh_cnt_controller(float& target_forward, float cur_mesh_cnt, float target_mesh_cnt, float dt, bool update)
-{
-    float p, i, d, ff;
-
-    if (update)
-    {
-        // we control the square root of current mesh count, since total meshcount grows quadratically over the distance to the net
-        // but we want a linear dependency between control input (forward throttle) and control variable (square root mesh count)
-        // mesh count error
-        float mesh_cnt_error = safe_sqrt(target_mesh_cnt) - safe_sqrt(cur_mesh_cnt);
-
-        // leash
-        mesh_cnt_error = constrain_float(mesh_cnt_error, -_leash_mesh_cnt, _leash_mesh_cnt);
-
-        // target velocity
-        // TODO: use square root controller
-        // TODO: constrain target velocity?
-        float mesh_cnt_vel_target = _p_mesh_cnt.get_p(mesh_cnt_error);
-
-        // calculate derivation of mesh count course
-        _mesh_cnt_vel_filter.set_cutoff_frequency(_mesh_cnt_vel_filter_cutoff);
-        float cur_mesh_cnt_vel = _mesh_cnt_vel_filter.apply((safe_sqrt(cur_mesh_cnt) - safe_sqrt(_mesh_cnt_last)) / dt, dt);
-        _mesh_cnt_last = cur_mesh_cnt;
-
-        // update pid controller
-        // negate pid input, as positive distance error requires negative motor input (backwards driving) and vice versa
-        _pid_mesh_vel.set_dt(dt);
-        target_forward = -1.0f * _pid_mesh_vel.update_all(mesh_cnt_vel_target, cur_mesh_cnt_vel, true);
-
-        // debugging output
-        if (AP_HAL::millis() - _last_debug_mesh_ms > 200)
-        {
-            gcs().send_named_float("d_mshcnt", target_mesh_cnt);
-            gcs().send_named_float("mshcnt", cur_mesh_cnt);
-            gcs().send_named_float("mshvel", cur_mesh_cnt_vel);
-            gcs().send_named_float("d_mshvel", mesh_cnt_vel_target);
-            _last_debug_mesh_ms = AP_HAL::millis();
-        }
-    }
-    else {
-        p = _pid_mesh_vel.get_p();
-        i = _pid_mesh_vel.get_i();
-        d = _pid_mesh_vel.get_d();
-        ff = _pid_mesh_vel.get_ff();
-
-        target_forward = -1.0f * (p + i + d + ff);
-    }
-
-    // set the cutoff frequency of the motors forward input filter
-    _motors.set_forward_filter_cutoff(POSCONTROL_FORWARD_CUTOFF_FREQ);
-}
-
 
 void AC_PosControl_Sub::update_optflx_controller(float& target_lateral, float cur_optflx, float target_optflx, float dt, bool update)
 {

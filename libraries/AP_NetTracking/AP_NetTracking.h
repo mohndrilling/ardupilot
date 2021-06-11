@@ -14,13 +14,11 @@
 #define AP_NETTRACKING_NETSHAPE_DEFAULT NetShape::FishFarm
 #define AP_NETTRACKING_DISTANCE_DEFAULT 50
 #define AP_NETTRACKING_INITIAL_NET_DISTANCE_TOLERANCE_DEFAULT 10.0f
-#define AP_NETTRACKING_MESH_CNT_DEFAULT 200
 #define AP_NETTRACKING_DETECTING_NET_FORWARD_THRUST_DEFAULT 0.15f
 #define AP_NETTRACKING_VELOCITY_DEFAULT 0.0f
 #define AP_NETTRACKING_OPTFLOW_VELOCITY_FACTOR 2.0f
 #define AP_NETTRACKING_DEFAULT_VELOCITY_FACTOR 0.8f
 #define AP_NETTRACKING_USE_OPT_MARKER_DEFAULT 0
-#define AP_NETTRACKING_CTRL_VAR_DEFAULT ControlVar::ctrl_distance
 #define AP_NETTRACKING_VEL_CTRL_DEFAULT 1
 #define AP_NETTRACKING_OPT_FLOW_VERTICAL_DIST_DEFAULT 200
 #define AP_NETTRACKING_OPT_FLOW_CUTOFF_FREQ_DEFAULT 0.2f
@@ -228,12 +226,6 @@ protected:
         FishFarm
     };
 
-    enum ControlVar
-    {
-        ctrl_distance,
-        ctrl_meshcount
-    };
-
     // stores time difference (seconds) between each incoming message of stereovision, image shift and net inspection modules
     // updated each loop
     struct SensorIntervals
@@ -257,8 +249,6 @@ protected:
     AP_Int8  _net_shape;
     AP_Int16 _tracking_distance;
     AP_Float _tracking_distance_tolerance;
-    AP_Int32 _tracking_meshcount;
-    AP_Int8  _control_var;
     AP_Float _tracking_velocity;
     AP_Int8  _velocity_ctrl;
     AP_Int8  _use_optical_marker_termination;

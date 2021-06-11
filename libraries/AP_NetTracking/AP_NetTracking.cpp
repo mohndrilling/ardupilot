@@ -31,14 +31,6 @@ const AP_Param::GroupInfo AP_NetTracking::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("DST_TOL", 2, AP_NetTracking, _tracking_distance_tolerance, AP_NETTRACKING_INITIAL_NET_DISTANCE_TOLERANCE_DEFAULT),
 
-    // @Param: MESH_CNT
-    // @DisplayName: Desired count of visible net meshes during net tracking
-    // @Description: Desired count of visible net meshes during net tracking
-    // @Range: 100 800
-    // @Increment: 1
-    // @User: Advanced
-    AP_GROUPINFO("MESH_CNT", 3, AP_NetTracking, _tracking_meshcount, AP_NETTRACKING_MESH_CNT_DEFAULT),
-
     // @Param: VEL
     // @DisplayName: Desired lateral velocity during net tracking in percent
     // @Description: Desired lateral velocity during net tracking in percent
@@ -47,13 +39,6 @@ const AP_Param::GroupInfo AP_NetTracking::var_info[] = {
     // @Increment: 1
     // @User: Advanced
     AP_GROUPINFO("VEL", 4, AP_NetTracking, _tracking_velocity, AP_NETTRACKING_VELOCITY_DEFAULT),
-
-    // @Param: CTRL_VAR
-    // @DisplayName: Whether to control the distance to the net or the amount of visible net meshes
-    // @Description: Whether to control the distance to the net or the amount of visible net meshes
-    // @Values: 0:Distance 1:MeshCount
-    // @User: Advanced
-    AP_GROUPINFO("CTRL_VAR", 5, AP_NetTracking, _control_var, AP_NETTRACKING_CTRL_VAR_DEFAULT),
 
     // @Param: VEL_CTRL
     // @DisplayName: Whether to use optical flow input to control the lateral velocity of the vehicle
@@ -637,7 +622,7 @@ bool AP_NetTracking::detect_loop_closure()
     else
     {
         // detect loop closure by elapsed yaw angle (prone to measurement drifts)
-        return fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) > radians(20.0f);
+        return fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) > radians(360.0f);
     }
 }
 
