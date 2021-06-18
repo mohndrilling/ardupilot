@@ -51,6 +51,15 @@ const AP_Param::Info Sub::var_info[] = {
     // @User: Standard
     GSCALAR(auto_arming_depth, "AUTO_ARM_DEPTH", AUTO_ARMING_DEPTH_DEFAULT),
 
+
+    // @Param: MAN_CTRL_TIMEOUT
+    // @DisplayName: Timeout of incoming manual control commands after which autonomous controls reactivate
+    // @Description:  Timeout of incoming manual control commands after which autonomous controls reactivate
+    // @Units: s
+    // @Range: 0 60
+    // @User: Standard
+    GSCALAR(manual_ctrl_timeout, "MAN_CTRL_TIMEOUT", MAN_CTRL_TIMEOUT_DEFAULT),
+
     // @Param: CONTROL_FRAME
     // @DisplayName: Control frame where pilot commands are interpreted in
     // @Description:  Control coordinate frame where pilot commands are interpreted in

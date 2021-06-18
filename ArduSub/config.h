@@ -32,6 +32,10 @@
 # define CONTROL_FRAME_DEFAULT CF_Body // Coordinate frame with regard to which the pilot commands are interpreted to
 #endif
 
+#ifndef MAN_CTRL_TIMEOUT_DEFAULT
+# define MAN_CTRL_TIMEOUT_DEFAULT 4.0f
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 // PWM control
 // default RC speed in Hz

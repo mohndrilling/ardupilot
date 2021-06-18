@@ -303,6 +303,12 @@ private:
     AP_Arming_Sub arming;
     bool auto_arming_allowed;
 
+    // used to temporarily overwrite autonomous controls when pilot commands are sent
+    struct {
+        uint32_t last_forward_ms;
+        uint32_t last_lateral_ms;
+    } pilot_input;
+
     // Altitude
     // The cm/s we are moving up or down based on filtered data - Positive = UP
     int16_t climb_rate;
