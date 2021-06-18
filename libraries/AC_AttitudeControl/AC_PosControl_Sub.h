@@ -76,6 +76,9 @@ public:
     /// control distance to net
     void update_dist_controller(float& target_forward, float cur_dist, float target_dist, float dt, bool update);
 
+    /// relax distance controller
+    void relax_dist_controller() { _pid_vel_dist.reset_I(); }
+
     /// control lateral velocity based on optical flow input error
     void update_optflx_controller(float& target_lateral, float cur_optflx, float target_optflx, float dt, bool update);
 
