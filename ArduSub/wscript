@@ -21,6 +21,7 @@ def build(bld):
             'AP_KDECAN',
             'AP_RCMapper',
             'AP_OSD',
+            'AP_LeastSquares',
             'AP_StereoVision',
             'AP_NetTracking',
             'AP_NetCleaning',

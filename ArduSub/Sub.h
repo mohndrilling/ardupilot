@@ -83,6 +83,7 @@
 
 #if STEREOVISION == ENABLED
 #include <AP_StereoVision/AP_StereoVision.h>     // Stereo Vision library
+#include <AP_LeastSquares/AP_LeastSquares.h>       // Net tracking library
 #include <AP_NetTracking/AP_NetTracking.h>       // Net tracking library
 #include <AP_NetCleaning/AP_NetCleaning.h>       // Net cleaning library
 #endif
