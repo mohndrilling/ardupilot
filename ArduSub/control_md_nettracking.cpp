@@ -78,8 +78,12 @@ void Sub::md_net_tracking_run()
         pos_control.relax_dist_controller();
     }
 
-    if (now - pilot_input.last_lateral_ms < man_ctrl_timeout)
+    // disable autonomous lateral movement if forward or lateral commands are sent
+    // autonomous lateral movement requires active distance controller and positioning to the net
+    if (now - pilot_input.last_lateral_ms < man_ctrl_timeout ||
+        now - pilot_input.last_forward_ms < man_ctrl_timeout)
     {
+        nettracking.reset_yaw_control();
         lateral_out = channel_lateral->norm_input();        
         pos_control.relax_optflx_controller();
     }
