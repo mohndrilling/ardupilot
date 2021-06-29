@@ -350,8 +350,10 @@ void AP_NetTracking::detect_net()
 
     /////////////// State Transition ////////////////
     float dt = float(AP_HAL::millis() - _first_state_execution_ms);
-    float yaw_rate = 1500.0f;
     float delta_yaw = 0.0f;
+    float max_yaw_rate = 900.0f;
+    float min_yaw_rate = 200.0f;
+    float yaw_rate = max_yaw_rate;
 
     if (_use_optical_marker_termination && _stereo_vision.marker_visible())
     {
@@ -360,8 +362,14 @@ void AP_NetTracking::detect_net()
     else if (_stereo_vision.stereo_vision_healthy())
     {
         // relative yaw in degrees with regard to detected net
+        // apply low pass filter to obtain a smooth course. Otherwise the termination conditition could fail as the yaw error
+        // could cross zero with too big steps (e.g. due to noise), thus never satisfying the minimum error threshold.
         delta_yaw = _net_detect_yaw_filt.apply(_stereo_vision.get_delta_yaw(), dt);
-        yaw_rate = constrain_float(0.25f * fabs(delta_yaw) - 250.0f, 500.0f, 1500.0f);
+
+        // linear decrease from max to min yaw rate as a function of the delta_yaw angle going from 50 to 0 degrees.
+        yaw_rate = (max_yaw_rate - min_yaw_rate) / 5000.0f * fabs(delta_yaw) + min_yaw_rate;
+        yaw_rate = constrain_float(yaw_rate, min_yaw_rate, max_yaw_rate);
+
         // consider net detected if the yaw error towards the net gets smaller than certain threshold (centidegrees!)
         if (fabs(delta_yaw) < 100.0f)
         {
@@ -369,11 +377,10 @@ void AP_NetTracking::detect_net()
         }
     }
 
-
     if (is_zero(_net_detect_yaw_rate_dir) && AP_HAL::millis() - _first_state_execution_ms > 1000)
         _net_detect_yaw_rate_dir = is_positive(delta_yaw) ? -1.0f : 1.0f;
 
-
+    // low pass filter the yaw rate to avoid steps, e.g. when stereo vision measurements start arriving
     yaw_rate = _net_detect_yaw_rate_filt.apply(_net_detect_yaw_rate_dir * yaw_rate, dt);
 
     if (_state_logic_finished)
