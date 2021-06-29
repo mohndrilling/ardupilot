@@ -148,9 +148,8 @@ const AP_Param::GroupInfo AC_AttitudeControl::var_info[] = {
     // @Param: YAW_ERR_FILT
     // @DisplayName: Cutoff frequency of yaw error filter during net tracking
     // @Description: Cutoff frequency of yaw error (w.r.t. faced plane) filter during net tracking
-    // @Range: 0.0 4.0
-    // @Values: 0.5:Very Soft, 0.2:Soft, 0.15:Medium, 0.1:Crisp, 0.05:Very Crisp
-    // @User: Advanced
+    // @Units: Hz
+    // @Range: 0 10
     AP_GROUPINFO("YAW_ERR_FILT", 21, AC_AttitudeControl, _yaw_filter_cut_off, AC_ATTITUDE_CONTROL_YAW_ERROR_CUTOFF_FREQ),
 
     AP_GROUPEND

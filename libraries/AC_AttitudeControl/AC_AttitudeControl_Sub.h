@@ -44,8 +44,8 @@ public:
     // Keep x-axis of the vehicle in the horizontal plane, only control about vehicles yaw axis
     void keep_nose_horizontal();
 
-    // Run attitude controller to hold current attitude
-    void keep_current_attitude();
+    // Run attitude controller to hold current target attitude
+    void hold_target_attitude();
 
     // Set the roll and pitch angles of the target attitude to zero
     void set_levelled_target_attitude();
@@ -78,6 +78,10 @@ public:
 
     // resets low pass filter for yaw error
     void reset_yaw_err_filter() { _yaw_error_filter.reset(0.0f); }
+
+    // update target attitude by given offset
+    void update_target_pitch(float euler_pitch_angle_offs_cd, float dt=0.0f);
+    void update_target_yaw(float euler_yaw_angle_offs_cd, float dt=0.0f);
 
     // sets target attitude values to zero
     void reset_target_attitude();
