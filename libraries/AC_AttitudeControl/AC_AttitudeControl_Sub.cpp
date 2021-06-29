@@ -434,7 +434,10 @@ void AC_AttitudeControl_Sub::start_trajectory(Vector3f target_euler_angles_cd, u
     // store duration
     // if duration is set to zero, compute dynamic duration based on axis angle
     float max_duration = 12000.0f;
+    float min_duration = 500.0f;
     _trajectory_duration_ms = duration == 0 ? static_cast<uint32_t>(max_duration / M_PI * fabs(_trajectory_axis_angle.length())) : duration;
+    _trajectory_duration_ms = MAX(min_duration, _trajectory_duration_ms);
+
     // store time stamp of trajectory start
     _trajectory_start_ms = AP_HAL::millis();
 }
