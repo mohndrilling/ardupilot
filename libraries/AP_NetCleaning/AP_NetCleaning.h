@@ -26,6 +26,7 @@
 #define AP_NETCLEANING_CLEANING_CLOCKWISE_DEFAULT 1
 #define AP_NETCLEANING_CLEAN_CLOCKWISE 1
 
+#define AP_NETTRACKING_AUTO_LEVEL_POST_DELAY 2000
 #define AP_NETCLEANING_ADJUSTED_BY_OPERATOR_POST_DELAY 10000
 #define AP_NETCLEANING_APPROACHING_INIT_ALTITUDE_POST_DELAY 2000
 #define AP_NETCLEANING_DETECTING_NET_POST_DELAY 0
@@ -94,7 +95,7 @@ protected:
     enum StateID
     {
       Inactive,
-
+      AutoLevel,
       AdjustedByOperator,
       ApproachingInitialAltitude,
       DetectingNetInitially,
@@ -152,6 +153,9 @@ protected:
     //////////////////////// State Logic Functions ////////////////////////////////////////////
     // inactive: Set output to zero
     void inactive() { set_translational_thrust(0.0f, 0.0f, 0.0f); }
+
+    // auto_level: Smooth transition to levelled orientation
+    void auto_level();
 
     // adjusted_by_operator: Wait for adjustment by operator
     void adjusted_by_operator();

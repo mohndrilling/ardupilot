@@ -142,7 +142,7 @@ void AP_NetCleaning::init()
     setup_state_machines();
 
     // set initial state (must be called after setup)
-    _current_state = _states[StateID::AdjustedByOperator];
+    _current_state = _states[StateID::AutoLevel];
     _prev_state = _states[StateID::Inactive];
     _first_run = true;
 }
@@ -150,6 +150,9 @@ void AP_NetCleaning::init()
 void AP_NetCleaning::setup_state_machines()
 {
     add_state(new State(StateID::Inactive, "Inactive",&AP_NetCleaning::inactive, 0, StateID::Inactive));
+
+    add_state(new State(StateID::AutoLevel, "AutoLevel",&AP_NetCleaning::auto_level,
+                        AP_NETTRACKING_AUTO_LEVEL_POST_DELAY, StateID::AdjustedByOperator));
 
     add_state(new State(StateID::AdjustedByOperator, "AdjustedByOperator",&AP_NetCleaning::adjusted_by_operator,
                         AP_NETCLEANING_ADJUSTED_BY_OPERATOR_POST_DELAY, StateID::ApproachingInitialAltitude));
@@ -209,7 +212,7 @@ void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle
         lateral_out = 0.0f;
         throttle_out = 0.0f;
 
-        _attitude_control.keep_current_attitude();
+        _attitude_control.hold_target_attitude();
 
         return;
     }
@@ -241,6 +244,26 @@ void AP_NetCleaning::run(float &forward_out, float &lateral_out, float &throttle
     _first_run = false;
 }
 
+void AP_NetCleaning::auto_level()
+{
+    // entry action
+    if (_first_run)
+    {
+        Vector3f target_euler_angles_cd = Vector3f(0.0f, 0.0f, RadiansToCentiDegrees(_ahrs.get_yaw()));
+        _attitude_control.start_trajectory(target_euler_angles_cd, 0, false);
+    }
+
+    // perform rotational trajectory, update_trajectory returns true if trajectory has finished
+    bool trajectory_finished = _attitude_control.update_trajectory();
+
+    // no translational movement
+    set_translational_thrust(0.0f, 0.0f, 0.0f);
+
+    /////////////// State Transition ////////////////
+    if (trajectory_finished)
+        set_state_logic_finished();
+}
+
 void AP_NetCleaning::adjusted_by_operator()
 {    
     // entry action
@@ -251,7 +274,7 @@ void AP_NetCleaning::adjusted_by_operator()
     }
 
     // run attitude controller to hold horizontal attitude
-    _attitude_control.keep_current_attitude();
+    _attitude_control.hold_target_attitude();
 
     // release yaw controller so operator can align the AUV's heading properly
     _attitude_control.relax_yaw_control();
@@ -270,7 +293,7 @@ void AP_NetCleaning::adjusted_by_operator()
 void AP_NetCleaning::approach_initial_altitude()
 {
     // run attitude controller to hold horizontal attitude
-    _attitude_control.keep_current_attitude();
+    _attitude_control.hold_target_attitude();
 
     // translational movement  (forward, lateral, throttle)
     // todo: use optical flow stabilization for lateral velocity
@@ -299,7 +322,7 @@ void AP_NetCleaning::approach_initial_altitude()
 void AP_NetCleaning::detect_net()
 {
     // run attitude controller, keep current attitude
-    _attitude_control.keep_current_attitude();
+    _attitude_control.hold_target_attitude();
 
     // no translational movement (forward, lateral, throttle)
     set_translational_thrust(_detect_net_forw_trust, 0.0f, 0.0f);
@@ -375,7 +398,7 @@ void AP_NetCleaning::align_vertical()
 void AP_NetCleaning::start_brush_motors()
 {
     // run attitude controller to hold horizontal attitude
-    _attitude_control.keep_current_attitude();
+    _attitude_control.hold_target_attitude();
 
     // no translational movement  (forward, lateral, throttle)
     set_translational_thrust(0.0f, 0.0f, 0.0f);
@@ -392,7 +415,7 @@ void AP_NetCleaning::start_brush_motors()
 void AP_NetCleaning::approach_net()
 {
     // run attitude controller, keep current attitude
-    _attitude_control.keep_current_attitude();
+    _attitude_control.hold_target_attitude();
 
     // translational movement  (forward, lateral, throttle)
     set_translational_thrust(0.0f, 0.0f, -_approach_thr_thrust);
@@ -501,7 +524,7 @@ void AP_NetCleaning::throttle_downwards()
 void AP_NetCleaning::detach_from_net()
 {
     // run attitude controller, keep current attitude
-    _attitude_control.keep_current_attitude();
+    _attitude_control.hold_target_attitude();
 
     // translational movement(forward, lateral, throttle)
     set_translational_thrust(0.0f, 0.0f, _approach_thr_thrust);
@@ -517,7 +540,7 @@ void AP_NetCleaning::detach_from_net()
 void AP_NetCleaning::stop_brush_motors()
 {
     // run attitude controller to hold horizontal attitude
-    _attitude_control.keep_current_attitude();
+    _attitude_control.hold_target_attitude();
 
     // no translational movement (forward, lateral, throttle)
     set_translational_thrust(0.0f, 0.0f, 0.0f);
@@ -592,7 +615,7 @@ void AP_NetCleaning::hold_heading_and_distance(float target_dist)
 
     if (!_stereo_vision.stereo_vision_healthy())
     {
-        _attitude_control.keep_current_attitude();
+        _attitude_control.hold_target_attitude();
         return;
     }
 
@@ -612,14 +635,17 @@ void AP_NetCleaning::hold_heading_and_distance(float target_dist)
     /////////////////////////////////////////////////////////////
     // attitude control, hold perpendicular heading with regard to net
 
-    // no roll desired
-    float target_roll = 0.0f;
+    float current_pitch = _ahrs.get_pitch();
+    float upper_pitch_limit = radians(10);
+    float lower_pitch_limit = radians(-10);
+    float pitch_error = -radians(0.01 * _stereo_vision.get_delta_pitch());
+    pitch_error = constrain_float(pitch_error, lower_pitch_limit - current_pitch, upper_pitch_limit - current_pitch);
+    _attitude_control.update_target_pitch(RadiansToCentiDegrees(pitch_error), _sensor_intervals.stv_dt);
 
-    // get pitch and yaw offset (in centidegrees) with regard to the faced object (net) in front
-    float target_pitch_error = _stereo_vision.get_delta_pitch();
-    float target_yaw_error = _stereo_vision.get_delta_yaw();
+    float yaw_error = -radians(0.01 * _stereo_vision.get_delta_yaw());
+    _attitude_control.update_target_yaw(RadiansToCentiDegrees(yaw_error), _sensor_intervals.stv_dt);
 
-    _attitude_control.input_euler_roll_pitch_yaw_accumulate(target_roll, target_pitch_error, target_yaw_error, _sensor_intervals.stv_dt, _sensor_updates.stv_updated);
+    _attitude_control.hold_target_attitude();
 
 
     ////////////////////////////////////////////////////////////
