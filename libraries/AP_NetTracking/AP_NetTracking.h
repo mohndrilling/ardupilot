@@ -10,6 +10,7 @@
 #include "AC_AttitudeControl/AC_AttitudeControl_Sub.h"
 #include "AC_AttitudeControl/AC_PosControl_Sub.h"
 #include "AP_StereoVision/AP_StereoVision.h"
+#include "AP_LeastSquares/AP_LeastSquares.h"
 
 #define AP_NETTRACKING_NETSHAPE_DEFAULT NetShape::FishFarm
 #define AP_NETTRACKING_DISTANCE_DEFAULT 50
@@ -27,6 +28,9 @@
 #define AP_NETTRACKING_START_TRACKING_DEPTH_DEFAULT 100
 #define AP_NETTRACKING_FINISH_TRACKING_DEPTH_DEFAULT 300
 #define AP_NETTRACKING_CLIMBING_RATE_CMS_DEFAULT 10.0f
+#define AP_NETTRACKING_REGRESSION_SIZE_DEFAULT 100
+#define AP_NETTRACKING_REGRESSION_DT_DEFAULT 100
+#define AP_NETTRACKING_REGRESSION_T_FORWARD_DEFAULT 500
 
 #define AP_NETTRACKING_AUTO_LEVEL_POST_DELAY 2000
 #define AP_NETTRACKING_ADJUSTED_BY_OPERATOR_POST_DELAY 0
@@ -83,6 +87,9 @@ public:
 
     // get 360 degrees loop progress in percent (further sent via mavlink)
     float get_loop_progress() { return _loop_progress; }
+
+    // reset yaw regression
+    void reset_yaw_control() { _yaw_regression.reset(); }
 
     // resets internal variables to default values
     void reset();
@@ -153,8 +160,8 @@ protected:
     // approach_net: move forwards until target distance to the net is reached
     void approach_net();
 
-    // hold_net_distance(): run distance controller and keep initial distance to net
-    void hold_net_distance();
+    // stabilize_net_distance: run distance controller and keep initial distance to net
+    void stabilize_net_distance();
 
     // call distance controller and attitude controller to keep desired distance and heading to net plane
     void scan();
@@ -169,8 +176,14 @@ protected:
     void wait_at_terminal();
 
     ////////////////// Helper Functions //////////////////////////////////////////////////
-    // hold_heading_and_distance: keeps desired distance and perpendicular heading w.r.t. the net
-    void hold_heading_and_distance(float target_dist);
+    // hold_distance_to_net: run the distance controller to obtain desired distance to the net
+    void hold_distance_to_net();
+
+    // align_normal_to_net: run pitch and yaw controller to obtain normal heading towards the net
+    void align_normal_to_net(bool align_pitch, bool align_yaw);
+
+    //linear_regression_error: computes a linear regression erro
+    float linear_regression_error(AP_LeastSquares &regression, float current, float error);
 
     // update lateral velocity (either static or based on optical flow controller)
     void update_lateral_out(float target_vel);
@@ -258,6 +271,9 @@ protected:
     AP_Float _detect_net_forw_trust;
     AP_Int8  _manual_adjustment_duration;
     AP_Float _climb_rate;
+    AP_Int16 _regression_size;
+    AP_Int16 _regression_dt;
+    AP_Int16 _regression_t_forward;
 
     uint32_t _last_stereo_update_ms;
     uint32_t _last_mesh_data_update_ms;
@@ -273,10 +289,10 @@ protected:
     float _opt_flow_sum_y;
 
     // stores the accumulated yaw value at start of each new 360 degrees loop. ROV should switch directions of lateral movements after 360 degrees scan
-    float _initial_yaw;    
+    float _initial_yaw_accumulated;
 
-    // the heading (yaw angle in radians) at start of net tracking
-    float _home_yaw;
+    // use linear regression to compute more reliable heading setpoints
+    bool _use_regression;
 
     // the altitude at start of net tracking
     float _home_altitude;
@@ -335,6 +351,9 @@ protected:
     LowPassFilterFloat _net_detect_yaw_filt; // low-pass-filter for yaw measurements during net detection
     LowPassFilterFloat _net_detect_yaw_rate_filt; // low-pass-filter for yaw rate during net detection
     float _net_detect_yaw_rate_dir; // which direction to rotate during net detection (cw: -1, ccw: +1)
+
+    // used for linear regression of pitch and yaw measurements
+    AP_LeastSquares _yaw_regression;
 
 public:
 };

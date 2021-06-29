@@ -115,6 +115,32 @@ const AP_Param::GroupInfo AP_NetTracking::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("T_ADJUST", 14, AP_NetTracking, _manual_adjustment_duration, AP_NETTRACKING_ADJUSTED_BY_OPERATOR_POST_DELAY),
 
+    // @Param: REGR_SIZE
+    // @DisplayName: Number of samples to consider for linear regression of yaw measurements
+    // @Description: Number of samples to consider for linear regression of yaw measurement
+    // @Range: 0 100
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("REGR_SIZE", 15, AP_NetTracking, _regression_size, AP_NETTRACKING_REGRESSION_SIZE_DEFAULT),
+
+    // @Param: REGR_DT
+    // @DisplayName: Minimum time difference between two successive samples used for regression
+    // @Description: Minimum time difference between two successive samples used for regression
+    // @Range: 0 5000
+    // @Units: ms
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("REGR_DT", 16, AP_NetTracking, _regression_dt, AP_NETTRACKING_REGRESSION_DT_DEFAULT),
+
+    // @Param: REGR_TFORW
+    // @DisplayName: Milliseconds to add to the current evaluation stamp of the regression line
+    // @Description: Milliseconds to add to the current evaluation stamp of the regression line to predict a future set point
+    // @Range: 0 5000
+    // @Units: ms
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("REGR_TFORW", 17, AP_NetTracking, _regression_t_forward, AP_NETTRACKING_REGRESSION_T_FORWARD_DEFAULT),
+
     AP_GROUPEND
 };
 
@@ -132,6 +158,7 @@ void AP_NetTracking::reset()
     _nettr_direction = 1.0f;
     _loop_progress = -1.0f;
     _terminate = false;
+    _use_regression = false;
 
     // reset filters
     _opt_flow_filt.reset();
@@ -172,7 +199,7 @@ void AP_NetTracking::setup_state_machines()
     add_state(new State(StateID::ApproachingNetInitially, "ApproachingNetInitially",&AP_NetTracking::approach_net,
                         AP_NETTRACKING_APPROACHING_NET_POST_DELAY, StateID::HoldingNetDistance));
 
-    add_state(new State(StateID::HoldingNetDistance, "HoldingNetDistance",&AP_NetTracking::hold_net_distance,
+    add_state(new State(StateID::HoldingNetDistance, "HoldingNetDistance",&AP_NetTracking::stabilize_net_distance,
                         AP_NETTRACKING_HOLDING_NET_DISTANCE_POST_DELAY, StateID::Scanning));
 
     add_state(new State(StateID::Scanning, "Scanning",&AP_NetTracking::scan,
@@ -197,7 +224,7 @@ void AP_NetTracking::run(float &forward_out, float &lateral_out, float &throttle
         lateral_out = 0.0f;
         throttle_out = 0.0f;
 
-        _attitude_control.keep_current_attitude();
+        _attitude_control.hold_target_attitude();
 
         return;
     }
@@ -240,7 +267,7 @@ void AP_NetTracking::auto_level()
     // entry action
     if (_first_run)
     {
-        Vector3f target_euler_angles_cd = Vector3f(0.0f, 0.0f, RadiansToCentiDegrees(_ahrs.get_current_yaw()));
+        Vector3f target_euler_angles_cd = Vector3f(0.0f, 0.0f, RadiansToCentiDegrees(_ahrs.get_yaw()));
         _attitude_control.start_trajectory(target_euler_angles_cd, 0, false);
     }
 
@@ -265,7 +292,7 @@ void AP_NetTracking::adjusted_by_operator()
     }
 
     // run attitude controller to hold horizontal attitude
-    _attitude_control.keep_current_attitude();
+    _attitude_control.hold_target_attitude();
 
     // release yaw controller so operator can align the AUV's heading properly
     _attitude_control.relax_yaw_control();
@@ -291,7 +318,7 @@ void AP_NetTracking::approach_initial_altitude()
     }
 
     // run attitude controller to hold horizontal attitude
-    _attitude_control.keep_current_attitude();
+    _attitude_control.hold_target_attitude();
 
     // translational movement  (forward, lateral, throttle)
     // todo: use optical flow stabilization for lateral velocity
@@ -332,7 +359,7 @@ void AP_NetTracking::detect_net()
     }
     else if (_stereo_vision.stereo_vision_healthy())
     {
-        // relative yaw in degrees with regard to detected netfloat
+        // relative yaw in degrees with regard to detected net
         delta_yaw = _net_detect_yaw_filt.apply(_stereo_vision.get_delta_yaw(), dt);
         yaw_rate = constrain_float(0.25f * fabs(delta_yaw) - 250.0f, 500.0f, 1500.0f);
         // consider net detected if the yaw error towards the net gets smaller than certain threshold (centidegrees!)
@@ -361,7 +388,7 @@ void AP_NetTracking::detect_net()
 void AP_NetTracking::approach_net()
 {
     // run attitude controller, keep current attitude
-    _attitude_control.keep_current_attitude();
+    _attitude_control.hold_target_attitude();
 
     // no translational movement (forward, lateral, throttle)
     set_translational_thrust(_detect_net_forw_trust, 0.0f, 0.0f);
@@ -382,14 +409,20 @@ void AP_NetTracking::approach_net()
     }
 }
 
-void AP_NetTracking::hold_net_distance()
+void AP_NetTracking::stabilize_net_distance()
 {
-    // translational movement (forward, lateral, throttle) (forward_out is overwritten by hold_heading_and_distance)
+    if (_first_run)
+    {
+        _use_regression = false;
+    }
+
+    // translational movement (forward, lateral, throttle) (forward_out is overwritten by hold_distance_to_net)
     // todo: use optical flow stabilization for lateral velocity
     set_translational_thrust(0.0f, 0.0f, 0.0f);
 
     // hold perpendicular heading with regard to the net and hold _tracking_distance towards net
-    hold_heading_and_distance(_tracking_distance);
+    hold_distance_to_net();
+    align_normal_to_net(true, true);
 
     /////////////// State Transition ////////////////
     if (_stereo_vision.stereo_vision_healthy())
@@ -404,7 +437,6 @@ void AP_NetTracking::hold_net_distance()
         if (fabs(cur_dist - d_dist) < _tracking_distance_tolerance / 100.0f)
         {
             set_state_logic_finished();
-            _home_yaw = _ahrs.get_current_yaw();
             _home_altitude = _inav.get_altitude();
         }
     }
@@ -414,16 +446,21 @@ void AP_NetTracking::scan()
 {
     if (_first_run)
     {
-        _initial_yaw = _attitude_control.get_accumulated_yaw();
         _current_state->_next_state = _terminate ? _current_state->_next_stateB : _current_state->_next_stateA;
+        _initial_yaw_accumulated = _attitude_control.get_accumulated_yaw();
+        _yaw_regression.reset();
+        _use_regression = true;
     }
 
-    // translational movement (forward, lateral, throttle) (forward_out is overwritten by hold_heading_and_distance)
+    // translational movement (forward, lateral, throttle) (forward_out is overwritten by hold_distance_to_net)
     // todo: use optical flow stabilization for lateral velocity
     set_translational_thrust(0.0f, 0.0f, 0.0f);
 
     // hold perpendicular heading with regard to the net and hold _tracking_distance towards net
-    hold_heading_and_distance(_tracking_distance);
+    hold_distance_to_net();
+
+    // lock pitch and align yaw
+    align_normal_to_net(false, true);
 
     // update lateral out
     if (_state_logic_finished)
@@ -460,7 +497,7 @@ void AP_NetTracking::scan()
         // debugging output
         if (AP_HAL::millis() - _last_debug_dyaw_ms > 200)
         {
-            gcs().send_named_float("dyaw", degrees(fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw)));
+            gcs().send_named_float("dyaw", degrees(fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw_accumulated)));
             _last_debug_dyaw_ms = AP_HAL::millis();
         }
 
@@ -476,6 +513,8 @@ void AP_NetTracking::scan()
     _nettr_direction *= -1.0f;
     _initial_opt_flow_sumy = _opt_flow_sum_y;
     set_state_logic_finished();
+    _yaw_regression.reset();
+    _use_regression = false;
 
     gcs().send_text(MAV_SEVERITY_INFO, "Loop Finished");
 
@@ -483,12 +522,13 @@ void AP_NetTracking::scan()
 
 void AP_NetTracking::throttle_downwards()
 {
-    // translational movement (forward, lateral, throttle) (forward_out is overwritten by hold_heading_and_distance)
+    // translational movement (forward, lateral, throttle) (forward_out is overwritten by hold_distance_to_net)
     // todo: use optical flow stabilization for lateral velocity
     set_translational_thrust(0.0f, 0.0f, 0.0f);
 
     // hold perpendicular heading with regard to the net and hold _tracking_distance towards net
-    hold_heading_and_distance(_tracking_distance);    
+    hold_distance_to_net();
+    align_normal_to_net(true, false);
 
     float doptfl_fac = 1.0f - constrain_float(fabs(_opt_flow_sum_y - _initial_opt_flow_sumy) / float(_opt_flow_vertical_dist), 0.0f, 1.0f);
     float doptfl_throttle_start = 0.3f;
@@ -506,12 +546,13 @@ void AP_NetTracking::throttle_downwards()
 
 void AP_NetTracking::surface()
 {
-    // translational movement (forward, lateral, throttle) (forward_out is overwritten by hold_heading_and_distance)
+    // translational movement (forward, lateral, throttle) (forward_out is overwritten by hold_distance_to_net)
     // todo: use optical flow stabilization for lateral velocity
     set_translational_thrust(0.0f, 0.0f, 0.0f);
 
     // hold perpendicular heading with regard to the net and hold _tracking_distance towards net
-    hold_heading_and_distance(_tracking_distance);
+    hold_distance_to_net();
+    align_normal_to_net(true, false);
 
     // ascend
     float dt = (AP_HAL::millis() - _last_state_execution_ms) / 1000.0f;
@@ -525,12 +566,13 @@ void AP_NetTracking::surface()
 
 void AP_NetTracking::wait_at_terminal()
 {
-    // translational movement (forward, lateral, throttle) (forward_out is overwritten by hold_heading_and_distance)
+    // translational movement (forward, lateral, throttle) (forward_out is overwritten by hold_distance_to_net)
     // todo: use optical flow stabilization for lateral velocity
     set_translational_thrust(0.0f, 0.0f, 0.0f);
 
     // hold perpendicular heading with regard to the net and hold _tracking_distance towards net
-    hold_heading_and_distance(_tracking_distance);
+    hold_distance_to_net();
+    align_normal_to_net(true, false);
 }
 
 void AP_NetTracking::update_lateral_out(float target_vel)
@@ -558,14 +600,37 @@ void AP_NetTracking::update_lateral_out(float target_vel)
     _lateral_out /= 250.0f;
 }
 
-void AP_NetTracking::hold_heading_and_distance(float target_dist)
+void AP_NetTracking::hold_distance_to_net()
+{
+    if (!_stereo_vision.stereo_vision_healthy())
+    {
+        _forward_out = 0.0f;
+        return;
+    }
+
+    // current distance to the net
+    float cur_dist = _stereo_vision.get_distance();
+
+    // desired distance (m)
+    float d_dist = _tracking_distance / 100.0f;
+
+    // get forward command from distance controller
+    _pos_control.update_dist_controller(_forward_out, cur_dist, d_dist, _sensor_intervals.stv_dt, _sensor_updates.stv_updated);
+
+    // constrain forward velocity in order to prevent rapid movement when the distance controller activates
+    // todo: check for any issues regarding integral windup (integrator of distance pid controller keeps charging while forward output is saturated)
+    // this may lead to overshooting (windup effect) but shouldn't be a problem here as the integral term of the pid controller is usually chosen to be relatively small
+    _forward_out = constrain_float(_forward_out, -_detect_net_forw_trust, _detect_net_forw_trust);
+}
+
+void AP_NetTracking::align_normal_to_net(bool align_pitch, bool align_yaw)
 {
     /////////////////////////////////////////////////////////
     // check and update stereo vision module
 
-    if (!_stereo_vision.stereo_vision_healthy())
+    if (!_stereo_vision.stereo_vision_healthy() || !_sensor_updates.stv_updated)
     {
-        _attitude_control.keep_current_attitude();
+        _attitude_control.hold_target_attitude();
         return;
     }
 
@@ -577,32 +642,44 @@ void AP_NetTracking::hold_heading_and_distance(float target_dist)
         _attitude_control.reset_yaw_err_filter();
     }
 
-    // no roll desired
-    float target_roll = 0.0f;
+    if (align_pitch)
+    {
+        float current_pitch = _ahrs.get_pitch();
+        float upper_pitch_limit = radians(10);
+        float lower_pitch_limit = radians(-15);
+        float pitch_error = -radians(0.01 * _stereo_vision.get_delta_pitch());
+        pitch_error = constrain_float(pitch_error, lower_pitch_limit - current_pitch, upper_pitch_limit - current_pitch);
+        _attitude_control.update_target_pitch(RadiansToCentiDegrees(pitch_error), _sensor_intervals.stv_dt);
+    }
 
-    // get pitch and yaw offset (in centidegrees) with regard to the faced object (net) in front
-    float target_pitch_error = _stereo_vision.get_delta_pitch();
-    float target_yaw_error = _stereo_vision.get_delta_yaw();
+    if (align_yaw)
+    {
+        float current_yaw = _attitude_control.get_accumulated_yaw();
+        float yaw_error = -radians(0.01 * _stereo_vision.get_delta_yaw());
+        float yaw_error_regr = linear_regression_error(_yaw_regression, current_yaw, yaw_error);
+        _attitude_control.update_target_yaw(RadiansToCentiDegrees(yaw_error_regr), _sensor_intervals.stv_dt);
+    }
 
-    _attitude_control.input_euler_roll_pitch_yaw_accumulate(target_roll, target_pitch_error, target_yaw_error, _sensor_intervals.stv_dt, _sensor_updates.stv_updated);
+    _attitude_control.hold_target_attitude();
+}
 
+float AP_NetTracking::linear_regression_error(AP_LeastSquares &regression, float current, float error)
+{
+    if (!_use_regression)
+        return error;
 
-    ////////////////////////////////////////////////////////////
-    // distance control
+    float target = current + error;
+    regression.set_num_samples(_regression_size);
 
-    // current distance to the net
-    float cur_dist = _stereo_vision.get_distance();
+    uint32_t now = AP_HAL::millis();
+    if (now - regression.latest_sample().x > _regression_dt)
+        regression.add_sample(float(_last_stereo_update_ms), target);
 
-    // desired distance (m)
-    float d_dist = target_dist / 100.0f;
+    int min_samples = 4;
+    if (regression.num_samples() > min_samples)
+        return regression.get_y(now + _regression_t_forward) - current;
 
-    // get forward command from distance controller
-    _pos_control.update_dist_controller(_forward_out, cur_dist, d_dist, _sensor_intervals.stv_dt, _sensor_updates.stv_updated);
-
-    // constrain forward velocity in order to prevent rapid movement when the distance controller activates
-    // todo: check for any issues regarding integral windup (integrator of distance pid controller keeps charging while forward output is saturated)
-    // this may lead to overshooting (windup effect) but shouldn't be a problem here as the integral term of the pid controller is usually chosen to be relatively small
-    _forward_out = constrain_float(_forward_out, -_detect_net_forw_trust, _detect_net_forw_trust);
+    return error;
 }
 
 bool AP_NetTracking::detect_loop_closure()
@@ -613,7 +690,7 @@ bool AP_NetTracking::detect_loop_closure()
         // This function shall only return true if the ROV has performed a full scanning loop.
         // As markers are still visible right after starting a loop, we check for the yaw angle of the ROV
         // of having exceeded a certain minimum angle since start of the last loop
-        if(fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) < radians(40.0f))
+        if(fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw_accumulated) < radians(40.0f))
             return false;
 
         else
@@ -622,7 +699,7 @@ bool AP_NetTracking::detect_loop_closure()
     else
     {
         // detect loop closure by elapsed yaw angle (prone to measurement drifts)
-        return fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) > radians(360.0f);
+        return fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw_accumulated) > radians(360.0f);
     }
 }
 
@@ -651,7 +728,7 @@ void AP_NetTracking::update_opt_flow()
 void AP_NetTracking::update_loop_progress()
 {
     //progress in percent (elapsed angle / 2pi * 100)
-    float tmp_loop_progress = fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw) * 50.0f / M_PI;
+    float tmp_loop_progress = fabs(_attitude_control.get_accumulated_yaw() - _initial_yaw_accumulated) * 50.0f / M_PI;
 
     // only update if it has increased since last run
     if (tmp_loop_progress > _loop_progress)
