@@ -176,6 +176,10 @@ void AP_NetTracking::init()
     // create the states of the state machines
     setup_state_machines();
 
+    // parametrize yaw regression
+    _yaw_regression.enable_outlier_removal(true);
+    _yaw_regression.set_outlier_threshold(radians(30.0f));
+
     // set default values
     reset();
 }

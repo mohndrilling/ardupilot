@@ -3,7 +3,9 @@
 
 
 AP_LeastSquares::AP_LeastSquares()
-    : _max_num_samples(AP_LEASTSQUARE_MAX_SAMPLES)
+    : _max_num_samples(AP_LEASTSQUARE_MAX_SAMPLES),
+      _filter_outliers(false),
+      _outlier_threshold(1.0e10)
 {
     reset();
 }
@@ -27,6 +29,10 @@ void AP_LeastSquares::set_num_samples(int num_samples)
 
 void AP_LeastSquares::add_sample(float x, float y)
 {
+    int min_rm_outlier_size = 5;
+    if (_filter_outliers && _cur_num_samples > min_rm_outlier_size && fabs(y - get_y(x)) > _outlier_threshold)
+        return;
+
     // increment head
     _head = (_head+1) % _max_num_samples;
 

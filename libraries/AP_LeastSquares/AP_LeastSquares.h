@@ -25,6 +25,12 @@ public:
     // get maximum number of samples
     int max_num_samples() { return _max_num_samples; }
 
+    // enables removal of outliers
+    void enable_outlier_removal(bool enable) { _filter_outliers = enable; }
+
+    // set outlier threshold
+    void set_outlier_threshold(float outlier_threshold) { _outlier_threshold = outlier_threshold; }
+
     // add a new xy sample
     void add_sample(float x, float y);
 
@@ -50,6 +56,12 @@ private:
 
     // pointer to the most recently added sample
     int _head;
+
+    // whether to remove outliers
+    bool _filter_outliers;
+
+    // threshold between sample and regression line beyond which to consider a sample as outlier
+    float _outlier_threshold;
 
     // list of xy samples where linear regression is performed on
     Vector2<float> _samples[AP_LEASTSQUARE_MAX_SAMPLES];
